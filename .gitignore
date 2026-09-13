@@ -1,20 +1,11 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-node_modules
+# ============================================
+# 通用
+# ============================================
 .DS_Store
-dist
-dist-ssr
-coverage
 *.local
+*.log
 
-# Editor directories and files
+# 编辑器
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -24,16 +15,50 @@ coverage
 *.sln
 *.sw?
 
+# ============================================
+# 前端 (frontend/)
+# ============================================
+node_modules/
+frontend/dist/
+frontend/dist-ssr/
+coverage/
 *.tsbuildinfo
-
 .eslintcache
-
-# Cypress
-/cypress/videos/
-/cypress/screenshots/
-
-# Vitest
-__screenshots__/
-
-# Vite
+frontend/__screenshots__/
 *.timestamp-*-*.mjs
+
+# 照片处理：原图不入库，只提交压缩后的成品
+frontend/photos_raw/
+
+# ============================================
+# 后端 (backend/)
+# ============================================
+__pycache__/
+*.py[cod]
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.venv/
+venv/
+env/
+
+# 环境变量（含密钥，绝不提交）
+.env
+.env.*
+!.env.example
+
+# 数据库
+*.sqlite3
+*.db
+
+# 上传的照片（本机开发用，线上走对象存储）
+backend/media/
+
+# ============================================
+# 其他
+# ============================================
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
