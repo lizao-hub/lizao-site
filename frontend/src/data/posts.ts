@@ -1,5 +1,15 @@
 import type { Post } from '@/types/post'
 
+/**
+ * 元信息留在 TypeScript 里（有类型、能排序、列表页直接读），
+ * 正文留在 Markdown 里（写起来舒服）。两者用 slug 对齐。
+ */
+const bodies = import.meta.glob<string>('../content/notes/*.md', {
+  eager: true,
+  query: '?raw',
+  import: 'default',
+})
+
 export const posts: Post[] = [
   {
     slug: 'python-to-vue-first-week',
@@ -35,11 +45,15 @@ export const posts: Post[] = [
   },
 ]
 
-export function formatDate(iso: string): string {
-  const date = new Date(`${iso}T00:00:00`)
-  return new Intl.DateTimeFormat('en-CA', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(date)
+/** 从新到旧。列表和「最近一篇」都读这一份，不要再依赖上面数组的书写顺序。 */
+export const postsByDate: Post[] = [...posts].sort((a, b) => b.date.localeCompare(a.date))
+
+export const latestPost: Post | undefined = postsByDate[0]
+
+export function findPost(slug: string): Post | undefined {
+  return posts.find((post) => post.slug === slug)
+}
+
+export function postBody(slug: string): string {
+  return bodies[`../content/notes/${slug}.md`] ?? ''
 }

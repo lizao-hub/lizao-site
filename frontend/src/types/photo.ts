@@ -1,15 +1,15 @@
-export interface FriendAlbum {
-  /** 相册标识，和 assets/photos-ta-all/ 下的文件夹名保持一致 */
+export interface PhotoItem {
+  /** 相册名加文件名，用作 key 和灯箱顺序 */
+  id: string
+  src: string
+  /** mine = 我的照片，friends = 朋友的照片。影像页分成两个分区 */
+  group: 'mine' | 'friends'
+  /** 相册文件夹名，我的照片固定是 life */
   album: string
-  /** 相册标题，按语言区分 */
-  name: Record<'zh' | 'en', string>
-  /** 图片的最终 URL，由 import.meta.glob 生成 */
-  images: string[]
-}
-
-/** 画廊统一用的照片条目 */
-export interface FriendPhoto {
-  album: string
-  name: Record<'zh' | 'en', string>
-  images: string[]
+  /** 相册的显示名，用于灯箱说明 */
+  albumName: string
+  /** 在该相册里的序号，从 1 开始 */
+  index: number
+  /** 可选的一句说明。没有就不显示，页面不会自己编。 */
+  note?: string
 }

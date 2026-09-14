@@ -1,54 +1,119 @@
 <script setup lang="ts">
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import NavToggles from '@/components/NavToggles.vue'
-import { useLocale } from '@/composables/useLocale'
-import { navCopy } from '@/data/navCopy'
+import PixelIcon from '@/components/PixelIcon.vue'
+import ThemeToggle from '@/components/ThemeToggle.vue'
+import { profile } from '@/data/resume'
 
-
-// useRoute()：获取当前路由对象，用于判断哪个导航项处于激活状态。
-// links 数组：将导航菜单抽象为数据，key 对应 navCopy 中的多语言键名，to 对应路由路径。新增/删除导航项只需修改此数组，无需改动模板。
-const { locale } = useLocale()
 const route = useRoute()
+const open = ref(false)
 
 const links = [
-  { key: 'notes', to: '/notes' },
-  { key: 'projects', to: '/projects' },
-  { key: 'about', to: '/about' },
-  { key: 'friends', to: '/friends' },
-] as const
+  { label: '首页', to: '/' },
+  { label: '项目', to: '/projects' },
+  { label: '关于', to: '/about' },
+  { label: '笔记', to: '/notes' },
+  { label: '影像', to: '/gallery' },
+]
+
+function isActive(to: string): boolean {
+  if (to === '/') return route.path === '/'
+  return route.path === to || route.path.startsWith(`${to}/`)
+}
+
+function onKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') open.value = false
+}
+
+watch(() => route.fullPath, () => {
+  open.value = false
+})
+
+onMounted(() => window.addEventListener('keydown', onKeydown))
+onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
 <template>
   <header
-    class="sticky top-0 z-40 border-b border-zinc-200 bg-white/80 backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/80"
+    class="sticky top-0 border-b-2 border-line bg-paper"
+    :style="{ zIndex: 'var(--z-nav)' }"
   >
-    <nav
-      aria-label="主导航"
-      class="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4"
-    >
-      <RouterLink
-        to="/"
-        class="shrink-0 text-base font-semibold tracking-tight transition-colors hover:text-zinc-600 dark:hover:text-zinc-300"
-      >
-        {{ navCopy[locale].brand }}
-        <!-- brand: '李枣的自留地' -->
+    <nav aria-label="主导航" class="shell flex h-16 items-center justify-between gap-4">
+      <RouterLink to="/" class="flex shrink-0 items-center gap-2.5" aria-label="回到首页">
+        <span class="pixel-logo" aria-hidden="true">LZ</span>
+        <span class="text-[0.95rem] font-semibold text-ink">{{ profile.name }}</span>
       </RouterLink>
 
-      <div class="flex items-center gap-6">
-        <ul class="flex items-center gap-1">
-          <li v-for="link in links" :key="link.key">
+      <div class="flex items-center gap-3 sm:gap-4">
+        <ul class="hidden items-center gap-6 md:flex">
+          <li v-for="link in links" :key="link.to" class="relative">
             <RouterLink
               :to="link.to"
-              class="rounded-md px-3 py-2 text-sm text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-              :class="{ 'text-zinc-900 font-medium dark:text-zinc-100': route.path === link.to }"
+              class="rule-link text-[0.875rem] transition-colors duration-150 ease-pixel"
+              :class="isActive(link.to) ? 'text-accent' : 'text-ink-soft hover:text-ink'"
             >
-              {{ navCopy[locale][link.key] }}
+              {{ link.label }}
             </RouterLink>
+            <span
+              v-if="isActive(link.to)"
+              class="absolute -bottom-1 left-0 h-[2px] w-full bg-accent"
+              aria-hidden="true"
+            />
           </li>
         </ul>
 
-        <NavToggles />
+        <a
+          :href="profile.github"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="hidden items-center gap-1.5 border-2 border-line px-2.5 py-1.5 font-mono text-[0.75rem] text-ink-soft transition-colors duration-150 ease-pixel hover:border-accent hover:text-accent sm:inline-flex"
+        >
+          GitHub
+          <PixelIcon name="external" :size="12" />
+        </a>
+
+        <ThemeToggle />
+
+        <button
+          type="button"
+          class="flex h-9 w-9 items-center justify-center border-2 border-line text-ink-soft transition-colors duration-150 ease-pixel hover:border-accent hover:text-accent md:hidden"
+          :aria-label="open ? '关闭菜单' : '打开菜单'"
+          :aria-expanded="open"
+          aria-controls="mobile-nav"
+          @click="open = !open"
+        >
+          <PixelIcon :name="open ? 'close' : 'menu'" :size="14" />
+        </button>
       </div>
     </nav>
+
+    <div
+      v-if="open"
+      id="mobile-nav"
+      class="absolute inset-x-0 top-16 border-b-2 border-line bg-paper md:hidden"
+    >
+      <ul class="shell flex flex-col py-2">
+        <li v-for="link in links" :key="link.to" class="border-b border-line last:border-b-0">
+          <RouterLink
+            :to="link.to"
+            class="block py-3.5 text-[0.95rem]"
+            :class="isActive(link.to) ? 'text-accent' : 'text-ink'"
+          >
+            {{ link.label }}
+          </RouterLink>
+        </li>
+        <li class="pt-3">
+          <a
+            :href="profile.github"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center gap-2 py-2 font-mono text-[0.85rem] text-ink-soft"
+          >
+            GitHub
+            <PixelIcon name="external" :size="12" />
+          </a>
+        </li>
+      </ul>
+    </div>
   </header>
 </template>

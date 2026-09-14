@@ -1,12 +1,27 @@
 <script setup lang="ts">
-import { useLocale } from '@/composables/useLocale'
-import { navCopy } from '@/data/navCopy'
-
-const { locale } = useLocale()
+import SectionFade from '@/components/SectionFade.vue'
+import NoteEntry from '@/components/NoteEntry.vue'
+import { postsByDate } from '@/data/posts'
 </script>
 
 <template>
-  <main class="mx-auto max-w-6xl px-4 py-12">
-    <h1 class="text-2xl font-bold">{{ navCopy[locale].notes }}</h1>
+  <main class="sheet page-top page-bottom">
+    <header>
+      <h1 class="text-[1.8rem] leading-tight sm:text-[2rem]">笔记</h1>
+      <p class="mt-5 max-w-[40rem] text-[0.95rem] leading-[1.9] text-ink-soft">
+        简历之外的技术补充：写代码时踩过的坑、读源码的方法、以及一些顺手记下来的结论。
+      </p>
+    </header>
+
+    <div class="mt-12 space-y-12">
+      <SectionFade
+        v-for="(post, i) in postsByDate"
+        :key="post.slug"
+        as="div"
+        :delay="i * 60"
+      >
+        <NoteEntry :post="post" />
+      </SectionFade>
+    </div>
   </main>
 </template>

@@ -2,22 +2,80 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ==========================================================================
+   设计令牌
+   定位：以求职为主、兼顾技术展示的个人简历站。
+   基调：极简专业（白底、大留白、深色文字），像素只做点缀。
+   全站只有一个强调色：复古蓝。形状锁：圆角一律 0。
+   ========================================================================== */
+
 @layer base {
+  :root {
+    --paper: #f7f8fa;
+    --surface: #ffffff;
+    --ink: #14161a;
+    --ink-soft: #5b616b;
+    --line: #dfe2e7;
+    --accent: #2b4bd6;
+    --accent-ink: #ffffff;
+
+    /* 像素硬阴影。直角、无模糊，是整套视觉里唯一的「立体」手法。 */
+    --pixel-shadow: 4px 4px 0 var(--line);
+    --pixel-shadow-accent: 4px 4px 0 var(--accent);
+
+    --z-nav: 40;
+    --z-lightbox: 50;
+
+    /* 灯箱遮罩。它是一张桌子，不是区块，所以明暗两个模式下都是深的。 */
+    --veil: #101114;
+    --veil-ink: #e6e8ec;
+
+    color-scheme: light;
+  }
+
+  .dark {
+    --paper: #0f1115;
+    --surface: #161a20;
+    --ink: #e6e8ec;
+    --ink-soft: #9aa2ad;
+    --line: #2a2f37;
+    --accent: #8aa2ff;
+    --accent-ink: #0f1115;
+
+    --pixel-shadow: 4px 4px 0 var(--line);
+    --pixel-shadow-accent: 4px 4px 0 var(--accent);
+
+    --veil: #08090b;
+    --veil-ink: #e6e8ec;
+
+    color-scheme: dark;
+  }
+
   html {
     -webkit-text-size-adjust: 100%;
+    background-color: var(--paper);
   }
 
   body {
-    @apply bg-white text-zinc-900 antialiased;
+    @apply bg-paper font-sans text-ink antialiased;
   }
 
-  .dark body {
-    @apply bg-zinc-900 text-zinc-100;
+  h1,
+  h2,
+  h3 {
+    @apply font-semibold text-ink;
+    text-wrap: balance;
   }
 
-  a:focus-visible,
-  button:focus-visible {
-    @apply outline-none ring-2 ring-zinc-900 ring-offset-2 ring-offset-white dark:ring-zinc-100 dark:ring-offset-zinc-900;
+  ::selection {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  /* 键盘焦点：2px 实心描边，不用圆角，和像素语言的直角一致 */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -27,15 +85,304 @@
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
     }
   }
 }
 
-@layer utilities {
-  .line-clamp-2 {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+@layer components {
+  /* 导航、页脚这类通栏内容的宽度 */
+  .shell {
+    @apply mx-auto w-full max-w-[68rem] px-5 sm:px-8;
   }
+
+  /* 正文栏。所有长文本都落在这一条里，保证每页阅读宽度一致。 */
+  .sheet {
+    @apply mx-auto w-full max-w-[46rem] px-5 sm:px-8;
+  }
+
+  /* 页面主区统一的上边距与下边距 */
+  .page-top {
+    @apply pt-14 sm:pt-20;
+  }
+  .page-bottom {
+    @apply pb-24 sm:pb-32;
+  }
+
+  /* 单行链接的下划线：从左往右长出来，像素宽度 2px */
+  .rule-link {
+    @apply relative inline-block;
+  }
+  .rule-link::after {
+    content: '';
+    @apply absolute bottom-[-0.2em] left-0 right-0;
+    height: 2px;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 200ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+  .rule-link:hover::after,
+  .rule-link:focus-visible::after {
+    transform: scaleX(1);
+  }
+
+  /* 像素分隔线：两像素实块 + 四像素空隙，比一根灰线更像点阵 */
+  .pixel-rule {
+    height: 2px;
+    background-image: linear-gradient(
+      to right,
+      var(--line) 0 2px,
+      transparent 2px 6px
+    );
+    background-size: 6px 100%;
+    background-repeat: repeat-x;
+  }
+
+  /* 像素按钮：直角、实线边框、硬阴影，按下时向右下压一格 */
+  .pixel-btn {
+    @apply inline-flex items-center gap-2 border-2 border-ink bg-surface px-4 py-2 text-[0.875rem] font-medium text-ink;
+    box-shadow: var(--pixel-shadow);
+    transition:
+      transform 140ms cubic-bezier(0.22, 0.61, 0.36, 1),
+      box-shadow 140ms cubic-bezier(0.22, 0.61, 0.36, 1),
+      border-color 140ms linear,
+      color 140ms linear;
+  }
+  .pixel-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: var(--pixel-shadow-accent);
+  }
+  .pixel-btn:active {
+    transform: translate(3px, 3px);
+    box-shadow: 0 0 0 var(--line);
+  }
+  .pixel-btn--primary {
+    @apply border-accent;
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  .pixel-btn--primary:hover {
+    color: var(--accent-ink);
+    box-shadow: var(--pixel-shadow-accent);
+  }
+
+  /* 技能标签：紧凑、可扫描，是全站出现次数最多的像素零件 */
+  .pixel-tag {
+    @apply inline-flex items-center border border-line bg-surface px-2 py-[0.3rem] font-mono text-[0.75rem] leading-none text-ink-soft;
+    transition:
+      border-color 140ms linear,
+      color 140ms linear;
+  }
+  .pixel-tag:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* 论文状态这类小徽标，只用强调色描边，不用填充，避免出现第二个色块 */
+  .pixel-badge {
+    @apply inline-flex items-center border border-accent px-[0.4rem] py-[0.15rem] font-mono text-[0.7rem] leading-tight text-accent;
+  }
+
+  /* 导航左侧的像素字标 */
+  .pixel-logo {
+    @apply inline-flex items-center border-2 border-ink px-[0.35rem] py-[0.3rem] font-pixel text-[0.55rem] leading-none;
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  /* 大号数字：像素字体只用在数字和短拉丁串上 */
+  .pixel-num {
+    @apply font-pixel text-ink;
+    letter-spacing: 0;
+  }
+
+  /* ------------------------------------------------------------------
+     照片：直角相框 + 硬阴影。去掉旧版的随机倾斜与手写标注。
+     ------------------------------------------------------------------ */
+  .pixel-photo {
+    @apply block w-full text-left;
+  }
+  .pixel-photo__frame {
+    @apply block w-full overflow-hidden border-2 border-line bg-surface;
+    box-shadow: var(--pixel-shadow);
+    transition:
+      transform 200ms cubic-bezier(0.22, 0.61, 0.36, 1),
+      box-shadow 200ms cubic-bezier(0.22, 0.61, 0.36, 1),
+      border-color 200ms linear;
+  }
+  .pixel-photo:hover .pixel-photo__frame,
+  .pixel-photo:focus-visible .pixel-photo__frame {
+    border-color: var(--accent);
+    box-shadow: var(--pixel-shadow-accent);
+    transform: translate(-2px, -2px);
+  }
+  .pixel-photo__img {
+    @apply block h-full w-full object-cover;
+    transition: filter 200ms linear;
+  }
+  .pixel-photo:hover .pixel-photo__img {
+    filter: saturate(1.05);
+  }
+  .pixel-photo__caption {
+    @apply mt-3 block font-mono text-[0.72rem] leading-relaxed text-ink-soft;
+  }
+
+  /* 首页与关于页的个人照片：固定比例，避免布局跳动 */
+  .portrait-frame {
+    @apply block w-full overflow-hidden border-2 border-ink bg-surface;
+    box-shadow: var(--pixel-shadow-accent);
+  }
+  .portrait-frame img {
+    @apply block h-full w-full object-cover;
+  }
+
+  /* 浅色像素网格背景，只用在首页首屏当装饰 */
+  .pixel-grid {
+    background-image: radial-gradient(var(--line) 1px, transparent 1px);
+    background-size: 16px 16px;
+    background-position: -1px -1px;
+  }
+
+  /* 滚动淡入：由 SectionFade.vue 用 IntersectionObserver 触发一次 */
+  .reveal {
+    opacity: 0;
+    transform: translateY(14px);
+    transition:
+      opacity 560ms cubic-bezier(0.22, 0.61, 0.36, 1),
+      transform 560ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+  .reveal.is-in {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* 看照片的遮罩 */
+  .veil {
+    background-color: var(--veil);
+    color: var(--veil-ink);
+  }
+
+  /* ------------------------------------------------------------------
+     Markdown 正文
+     代码块不做语法高亮：像素风里也不需要多一种颜色。
+     ------------------------------------------------------------------ */
+  .prose-note {
+    font-size: 1.0625rem;
+    line-height: 1.95;
+  }
+  .prose-note > * + * {
+    margin-top: 1.6em;
+  }
+  .prose-note h2 {
+    margin-top: 2.6em;
+    font-size: 1.2rem;
+    font-weight: 600;
+    line-height: 1.6;
+  }
+  .prose-note h3 {
+    margin-top: 2.2em;
+    font-size: 1.0625rem;
+    font-weight: 600;
+    line-height: 1.6;
+  }
+  .prose-note ul,
+  .prose-note ol {
+    padding-left: 1.35em;
+  }
+  .prose-note ul {
+    list-style: square;
+  }
+  .prose-note ol {
+    list-style: decimal;
+  }
+  .prose-note li + li {
+    margin-top: 0.5em;
+  }
+  .prose-note li::marker {
+    color: var(--accent);
+  }
+  .prose-note a {
+    color: var(--accent);
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+  }
+  .prose-note strong {
+    font-weight: 600;
+  }
+  .prose-note blockquote {
+    padding-left: 1.2rem;
+    border-left: 2px solid var(--accent);
+    color: var(--ink-soft);
+  }
+  .prose-note code {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.875em;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    padding: 0.12em 0.36em;
+  }
+  .prose-note pre {
+    background: var(--surface);
+    border: 2px solid var(--line);
+    padding: 1.15rem 1.25rem;
+    overflow-x: auto;
+    font-size: 0.875rem;
+    line-height: 1.8;
+  }
+  .prose-note pre code {
+    background: none;
+    border: 0;
+    padding: 0;
+    font-size: inherit;
+  }
+  .prose-note hr {
+    height: 2px;
+    margin: 3em 0;
+    border: 0;
+    background-image: linear-gradient(
+      to right,
+      var(--line) 0 2px,
+      transparent 2px 6px
+    );
+    background-size: 6px 100%;
+  }
+  .prose-note img {
+    width: 100%;
+    border: 2px solid var(--line);
+  }
+  .prose-note table {
+    width: 100%;
+    font-size: 0.9375rem;
+  }
+  .prose-note th,
+  .prose-note td {
+    padding: 0.5em 0.75em 0.5em 0;
+    text-align: left;
+    vertical-align: top;
+  }
+  .prose-note th {
+    border-bottom: 2px solid var(--line);
+    font-weight: 600;
+  }
+}
+
+/* ==========================================================================
+   路由过渡
+   只有 opacity，没有位移。类名由 Vue 在运行时加上，必须写在 @layer 之外。
+   ========================================================================== */
+
+.page-enter-active {
+  transition: opacity 360ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.page-leave-active {
+  transition: opacity 180ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.page-enter-from,
+.page-leave-to {
+  opacity: 0;
 }

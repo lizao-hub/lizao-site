@@ -1,10 +1,42 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
   <head>
-    <meta charset="UTF-8">
-    <link rel="icon" href="/favicon.ico">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>XXX 的自我介绍</title>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>李泽敖 | 简历与作品集</title>
+    <meta
+      name="description"
+      content="李泽敖的个人网站：杭州师范大学数学硕士研究生，研究方向为工业时序大模型、工业软测量与 AI Agent 应用。"
+    />
+    <meta name="theme-color" content="#f7f8fa" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="李泽敖 | 简历与作品集" />
+    <meta
+      property="og:description"
+      content="杭州师范大学数学硕士研究生，研究方向为工业时序大模型、工业软测量与 AI Agent 应用。"
+    />
+
+    <!--
+      在 CSS 加载之前先把底色定下来，否则深色模式下会闪一下白。
+      逻辑必须和 src/composables/useTheme.ts 保持一致。
+    -->
+    <script>
+      ;(function () {
+        var root = document.documentElement
+        try {
+          var stored = localStorage.getItem('lizao-theme')
+          var dark =
+            stored === 'dark' ||
+            (stored !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+          root.classList.toggle('dark', dark)
+          root.style.backgroundColor = dark ? '#0f1115' : '#f7f8fa'
+        } catch (e) {
+          root.style.backgroundColor = '#f7f8fa'
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="app"></div>

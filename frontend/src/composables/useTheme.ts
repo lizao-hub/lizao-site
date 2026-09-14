@@ -5,8 +5,12 @@ export type Theme = 'light' | 'dark'
 const STORAGE_KEY = 'lizao-theme'
 
 function readStoredTheme(): Theme | null {
-  const value = localStorage.getItem(STORAGE_KEY)
-  if (value === 'light' || value === 'dark') return value
+  try {
+    const value = localStorage.getItem(STORAGE_KEY)
+    if (value === 'light' || value === 'dark') return value
+  } catch {
+    // 隐私模式下 localStorage 可能不可用，回落到系统偏好
+  }
   return null
 }
 
@@ -24,7 +28,11 @@ applyTheme(theme.value)
 
 watch(theme, (value) => {
   applyTheme(value)
-  localStorage.setItem(STORAGE_KEY, value)
+  try {
+    localStorage.setItem(STORAGE_KEY, value)
+  } catch {
+    // 写不进去也不影响本次会话的显示
+  }
 })
 
 export function useTheme() {

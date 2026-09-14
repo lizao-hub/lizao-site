@@ -1,41 +1,53 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watchEffect } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { posts, formatDate } from '@/data/posts'
+import PixelIcon from '@/components/PixelIcon.vue'
+import { findPost, postBody } from '@/data/posts'
+import { shortDate } from '@/utils/date'
+import { renderNote } from '@/utils/markdown'
+import { profile } from '@/data/resume'
 
 const route = useRoute()
-const post = computed(() => posts.find((item) => item.slug === route.params.slug))
+
+const post = computed(() => findPost(String(route.params.slug)))
+const html = computed(() => (post.value ? renderNote(postBody(post.value.slug)) : ''))
+
+// 路由那边给了静态标题，这里用文章自己的标题盖掉它
+watchEffect(() => {
+  document.title = post.value ? `${post.value.title} | ${profile.name}` : `${profile.name}`
+})
 </script>
 
 <template>
-  <main class="max-w-3xl mx-auto px-4 py-12">
+  <main class="sheet page-top page-bottom">
     <RouterLink
-      to="/"
-      class="text-sm text-zinc-500 transition-colors hover:text-zinc-900 dark:hover:text-white"
+      to="/notes"
+      class="rule-link inline-flex items-center gap-2 font-mono text-[0.78rem] text-ink-soft hover:text-ink"
     >
-      返回首页
+      <PixelIcon name="left" :size="12" />
+      笔记
     </RouterLink>
 
     <template v-if="post">
-      <h1 class="text-3xl font-bold mt-6">{{ post.title }}</h1>
+      <h1 class="mt-8 text-[1.6rem] leading-[1.5] sm:text-[1.9rem]">{{ post.title }}</h1>
 
-      <time :datetime="post.date" class="block text-sm text-zinc-500 mt-2">
-        {{ formatDate(post.date) }}
-      </time>
+      <p class="mt-5 font-mono text-[0.75rem] tracking-[0.04em] text-ink-soft">
+        {{ shortDate(post.date) }}
+      </p>
 
-      <ul class="flex flex-wrap gap-2 mt-3">
-        <li
-          v-for="tag in post.tags"
-          :key="tag"
-          class="text-xs px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
-        >
-          {{ tag }}
-        </li>
-      </ul>
+      <!-- markdown-it 关了 html 和 typographer，正文是自己写的 Markdown -->
+      <div class="prose-note mt-12" v-html="html" />
 
-      <p class="text-zinc-700 dark:text-zinc-300 mt-6 leading-relaxed">{{ post.summary }}</p>
+      <footer class="mt-16 border-t-2 border-line pt-6">
+        <p class="font-mono text-[0.72rem] tracking-[0.04em] text-ink-soft">
+          {{ post.tags.join(' / ') }}
+        </p>
+      </footer>
     </template>
 
-    <p v-else class="text-zinc-500 italic text-center py-12">找不到这篇文章</p>
+    <div v-else class="mt-10">
+      <p class="text-ink-soft">找不到这篇文章。</p>
+      <RouterLink to="/notes" class="pixel-btn mt-6">返回笔记列表</RouterLink>
+    </div>
   </main>
 </template>
