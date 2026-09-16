@@ -22,6 +22,7 @@ src/
 │   ├── notes-cover/             笔记封面，文件名 = slug（见该目录下的 README）
 │   └── photos-ta-all/<相册>/    朋友的照片
 ├── components/
+│   ├── ParallaxCover.vue        首页封面：四层滚动视差（gsap 只在首页动态引入）
 │   ├── SiteNav.vue              固定导航 + GitHub + 明暗切换 + 手机菜单
 │   ├── SiteFooter.vue
 │   ├── ThemeToggle.vue          明暗切换按钮
@@ -168,7 +169,12 @@ Vue 在运行时才加上的类（`page-enter-active` 之类）在源码里搜�
 `LineIcon.vue` 的线质必须和手绘边框一致，否则一眼看出是拼的。
 
 **环境动效必须尊重 `prefers-reduced-motion`。**
-滚动路径上不留任何逐帧计算，见 ADR-0005。
+见 ADR-0005。
+
+**改视差的 `data-speed` 之前，先看 ADR-0007。**
+两条例必守：CSS 的 overhang（`inset: -80% 0`）必须 >= 最大 speed；
+位移只能用 `y: -speed * innerHeight`，不能用 `yPercent`。
+两条一起错会让滚动到底时露出黑边，而且不会自愈。
 
 ---
 

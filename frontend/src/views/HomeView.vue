@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
+import ParallaxCover from '@/components/ParallaxCover.vue'
 import SectionFade from '@/components/SectionFade.vue'
 import SkillTag from '@/components/SkillTag.vue'
 import LineIcon from '@/components/LineIcon.vue'
@@ -16,79 +17,46 @@ const recentPhotos = computed(() => myPhotos.slice(0, 4))
 
 <template>
   <main>
-    <!-- 首屏。左侧是一段话，右侧一张真实照片；角落两个很慢的自然意象
-         （云与叶）在飘，只在首屏，不跟滚动联动。见 ADR-0005。 -->
-    <section class="hero relative overflow-hidden border-b border-line">
-      <!-- 环境动效：两个元素，7s 以上周期，压在内容下面 -->
-      <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-        <svg
-          class="drift sketchy absolute -top-2 right-[8%] h-16 w-32 text-water sm:h-20 sm:w-40"
-          viewBox="0 0 160 64"
-          fill="none"
-          opacity="0.22"
-        >
-          <path
-            d="M22 44c-9 0-16-6-16-14S13 16 24 16c4-7 12-11 21-11 12 0 22 7 25 17 8 1 14 7 14 15 0 4-2 7-5 10H22Z"
-            fill="currentColor"
-          />
-        </svg>
-        <svg
-          class="sway sketchy absolute bottom-[14%] left-[4%] h-10 w-10 text-moss sm:h-12 sm:w-12"
-          viewBox="0 0 40 40"
-          fill="none"
-          opacity="0.26"
-        >
-          <path
-            d="M6 32C2 20 10 8 28 4c2 16-8 26-22 28Z"
-            fill="currentColor"
-            opacity="0.7"
-          />
-          <path d="M9 29c6-6 11-11 17-16" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
-        </svg>
-      </div>
+    <!-- 封面。四层视差，文案在封面里（它本身就是首屏）。见 ADR-0007。 -->
+    <ParallaxCover />
 
-      <div
-        class="shell relative grid gap-8 py-16 sm:gap-12 sm:py-24 lg:grid-cols-[1.4fr_0.9fr] lg:items-center lg:gap-16"
-      >
-        <div>
-          <p class="text-[0.75rem] tracking-[0.14em] text-accent">杭州 · 在读</p>
-
-          <h1 class="mt-5 text-[2rem] leading-tight sm:text-[2.6rem]">{{ profile.name }}</h1>
-
-          <p class="mt-5 max-w-[34rem] text-[0.95rem] leading-[1.95] text-ink-soft">
+    <!-- 自述。头像从旧首屏移到这里，让封面先发生 -->
+    <section class="shell page-top">
+      <div class="grid gap-8 sm:grid-cols-[1fr_10rem] sm:items-start sm:gap-10">
+        <SectionFade>
+          <h2 class="text-[1.3rem]">你好</h2>
+          <p class="mt-4 max-w-[34rem] text-[0.95rem] leading-[2] text-ink-soft">
             {{ profile.tagline }}
           </p>
-
-          <p class="mt-4 max-w-[34rem] text-[0.95rem] leading-[1.95] text-ink-soft">
+          <p class="mt-4 max-w-[34rem] text-[0.95rem] leading-[2] text-ink-soft">
             这里是自留地。放写过的代码、拍过的照片，和一些顺手记下来的东西。
           </p>
 
-          <ul class="mt-7 flex flex-wrap gap-2">
+          <ul class="mt-6 flex flex-wrap gap-2">
             <li v-for="tag in profile.focus" :key="tag">
               <SkillTag :label="tag" />
             </li>
           </ul>
 
-          <div class="mt-9 flex flex-wrap gap-4">
+          <div class="mt-8 flex flex-wrap gap-4">
             <RouterLink to="/notes" class="btn btn--primary">
               看看笔记
               <LineIcon name="arrow" :size="13" />
             </RouterLink>
             <RouterLink to="/about" class="btn">关于我</RouterLink>
           </div>
-        </div>
+        </SectionFade>
 
-        <div v-if="heroPhoto" class="mx-auto w-full max-w-[11rem] sm:max-w-[13rem] lg:max-w-none">
+        <SectionFade v-if="heroPhoto" :delay="80">
           <span class="portrait-frame" :style="{ aspectRatio: '4 / 5' }">
             <img
               :src="heroPhoto.src"
               :alt="`${heroPhoto.albumName}：第 ${heroPhoto.index} 张`"
-              loading="eager"
-              fetchpriority="high"
+              loading="lazy"
               decoding="async"
             />
           </span>
-        </div>
+        </SectionFade>
       </div>
     </section>
 

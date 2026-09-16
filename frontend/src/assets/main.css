@@ -152,19 +152,6 @@
     @apply pb-28 sm:pb-36;
   }
 
-  /* 首屏：内容居中一点，但不再强锁一屏高（跑步游戏删了，没那个必要）。 */
-  .hero {
-    @apply flex flex-col justify-center;
-  }
-
-  /* 矮屏（iPhone SE 这类）：文字已占满一屏，照片会把它顶出去，直接隐掉。
-     照片在 /gallery 与 /about 都还能看到，不是藏起来。 */
-  @media (max-height: 700px) and (max-width: 639px) {
-    .hero img {
-      display: none;
-    }
-  }
-
   /* ------------------------------------------------------------------
      纸感
      极淡的噪点，消除数字化的冰冷感。用内联 SVG feTurbulence 生成，
@@ -391,8 +378,242 @@
   }
 
   /* ------------------------------------------------------------------
+     首页封面：四层视差
+     ------------------------------------------------------------------
+     .plx 是滚动通道，高度决定视差能滚多久。
+     .plx__viewport 用 sticky 黏在屏幕上，真正的位移全由 gsap 写在 y 上。
+
+     两条容易踩的线：
+     1. overhang 必须 >= 最大 speed。层的位移是按「视口高」算的，
+        上移 s 后层底从 1+ov 落到 1+ov-s，要盖住视口底就需要 ov >= s。
+        最大 speed 是 0.70，这里留到 0.80。改 speed 时先看这一条。
+     2. 位移不能用 yPercent。它按层自身高度算，层越高位移越大，
+        会和 overhang 互相放大，永远追不上。
+     ------------------------------------------------------------------ */
+  .plx {
+    position: relative;
+    /* 一屏封面 + 半屏给视差，别让访客等太久才看到内容 */
+    height: 150vh;
+  }
+
+  .plx__viewport {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+    /* 封面是黄昏景，两种主题下都是深的，所以文字固定浅色 */
+    background: #0b1a2e;
+  }
+
+  .plx__layer {
+    position: absolute;
+    inset: -80% 0;
+    background-repeat: no-repeat;
+    background-position: center bottom;
+    background-size: cover;
+    will-change: transform;
+    transform: translate3d(0, 0, 0);
+  }
+
+  /*
+    ▼▼▼ 换成真图时改这里 ▼▼▼
+
+    现在是纯 CSS/SVG 占位，不依赖任何图片就能跑（见 ADR-0007）。
+    换真图时：天空用 JPG（不透明），山 / 树 / 前景用透明 PNG。
+    四张要同一比例、同一视点，否则叠起来会错位。
+
+      .plx__layer--sky  { background-image: url("@/assets/cover/1-sky.jpg"); }
+      .plx__layer--hill { background-image: url("@/assets/cover/2-hill.png"); }
+      .plx__layer--tree { background-image: url("@/assets/cover/3-tree.png"); }
+      .plx__layer--fore { background-image: url("@/assets/cover/4-fore.png"); }
+  */
+  .plx__layer--sky {
+    z-index: 1;
+    background-image: linear-gradient(
+      #0b1a2e 0%,
+      #16375c 32%,
+      #2f6a93 58%,
+      #7fb0c4 78%,
+      #e3c9a8 100%
+    );
+  }
+
+  /* 落日，算天空层的一部分，跟着天空一起（几乎不）动 */
+  .plx__layer--sky::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 36%;
+    width: 15vmin;
+    height: 15vmin;
+    margin-left: -7.5vmin;
+    border-radius: 50%;
+    background: radial-gradient(
+      circle,
+      #ffe7bd 0%,
+      #ffd08a 42%,
+      rgba(255, 190, 120, 0) 70%
+    );
+  }
+
+  .plx__layer--hill {
+    z-index: 2;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 900' preserveAspectRatio='none'><path d='M0 620 L180 470 L330 560 L520 400 L700 540 L880 430 L1060 580 L1240 480 L1440 610 L1440 900 L0 900 Z' fill='%23234a6b'/><path d='M0 700 L200 590 L380 660 L560 540 L760 650 L960 560 L1160 670 L1440 580 L1440 900 L0 900 Z' fill='%231b3a55'/></svg>");
+  }
+
+  .plx__layer--tree {
+    z-index: 3;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 900' preserveAspectRatio='none'><path d='M0 760 Q120 600 240 760 T480 760 T720 760 T960 760 T1200 760 T1440 760 L1440 900 L0 900 Z' fill='%23133a2f'/><g fill='%230e2c25'><path d='M120 500 l38 260 h-76 Z'/><path d='M120 430 l34 90 h-68 Z'/><path d='M1320 520 l40 240 h-80 Z'/><path d='M1320 455 l36 80 h-72 Z'/><path d='M980 545 l34 215 h-68 Z'/><path d='M980 480 l30 80 h-60 Z'/></g></svg>");
+  }
+
+  .plx__layer--fore {
+    z-index: 4;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 900' preserveAspectRatio='none'><path d='M0 830 Q240 760 480 826 T960 820 T1440 812 L1440 900 L0 900 Z' fill='%23071018'/><g fill='%23050b11'><path d='M60 830 l10 -260 q4 -30 16 -30 t16 30 l10 260 Z'/><path d='M240 838 l12 -300 q4 -34 18 -34 t18 34 l12 300 Z'/><path d='M1180 826 l11 -280 q4 -32 17 -32 t17 32 l11 280 Z'/><path d='M1380 834 l10 -250 q4 -30 16 -30 t16 30 l10 250 Z'/></g></svg>");
+  }
+
+  /* --- 封面文案 --- */
+  .plx__caption {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0 1.5rem;
+    text-align: center;
+    color: #f2f5f8;
+    pointer-events: none;
+  }
+
+  .plx__caption a {
+    pointer-events: auto;
+  }
+
+  .plx__eyebrow {
+    margin: 0;
+    font-size: 0.75rem;
+    letter-spacing: 0.18em;
+    opacity: 0.75;
+    text-shadow: 0 2px 18px rgba(6, 14, 24, 0.6);
+  }
+
+  .plx__title {
+    margin: 0.9rem 0 0;
+    font-size: clamp(2rem, 7vw, 4.2rem);
+    font-weight: 300;
+    letter-spacing: 0.05em;
+    line-height: 1.2;
+    text-shadow: 0 2px 26px rgba(6, 14, 24, 0.6);
+  }
+
+  .plx__sub {
+    margin: 1.2rem 0 0;
+    max-width: 30rem;
+    font-size: clamp(0.85rem, 2.2vw, 1rem);
+    font-weight: 300;
+    line-height: 1.9;
+    opacity: 0.9;
+    text-shadow: 0 2px 18px rgba(6, 14, 24, 0.55);
+  }
+
+  .plx__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.9rem;
+    justify-content: center;
+    margin-top: 2rem;
+  }
+
+  /* 封面上的按钮用浅色系，不受明暗主题影响（底图是固定的黄昏景） */
+  .plx__btn {
+    @apply inline-flex items-center gap-2 px-4 py-2 text-[0.875rem];
+    border: 1.5px solid rgba(242, 245, 248, 0.85);
+    border-radius: 14px 10px 15px 9px / 9px 15px 10px 14px;
+    color: #f2f5f8;
+    background: rgba(11, 26, 46, 0.35);
+    transition:
+      transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1),
+      background-color 160ms linear,
+      border-color 160ms linear;
+  }
+  .plx__btn:hover {
+    background: rgba(11, 26, 46, 0.6);
+    transform: translate(-1px, -1px);
+  }
+  .plx__btn--primary {
+    background: rgba(242, 245, 248, 0.92);
+    color: #16233a;
+    border-color: transparent;
+  }
+  .plx__btn--primary:hover {
+    background: #f2f5f8;
+  }
+
+  /* --- 向下滚动提示 --- */
+  .plx__hint {
+    position: absolute;
+    left: 50%;
+    bottom: 2rem;
+    z-index: 5;
+    transform: translateX(-50%);
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    color: #f2f5f8;
+    pointer-events: none;
+  }
+
+  .plx__hint::after {
+    content: '';
+    display: block;
+    width: 1px;
+    height: 32px;
+    margin: 0.7rem auto 0;
+    background: currentColor;
+    transform-origin: top;
+    animation: plx-hint 2.2s ease-in-out infinite;
+  }
+
+  @keyframes plx-hint {
+    0%,
+    100% {
+      transform: scaleY(0.25);
+      opacity: 0.3;
+    }
+    50% {
+      transform: scaleY(1);
+      opacity: 0.9;
+    }
+  }
+
+  /*
+    加载动画的初始隐藏态。
+    .is-pending 只在 gsap 期间挂着；gsap 不可用或失败时会被撤掉，
+    否则文案会永远看不见。见 ParallaxCover.vue。
+  */
+  .plx.is-pending [data-fx='title'],
+  .plx.is-pending [data-fx='sub'] {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  .plx.is-pending [data-fx='hint'] {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .plx__hint::after {
+      animation: none;
+    }
+    .plx__layer {
+      will-change: auto;
+    }
+  }
+
+  /* ------------------------------------------------------------------
      滚动淡入：由 SectionFade.vue 用 IntersectionObserver 触发一次。
-     只有 opacity 与很小的位移，不做视差（见 ADR-0005）。
+     只有 opacity 与很小的位移，见 ADR-0005。
      ------------------------------------------------------------------ */
   .reveal {
     opacity: 0;
@@ -410,35 +631,6 @@
   .veil {
     background-color: var(--veil);
     color: var(--veil-ink);
-  }
-
-  /* ------------------------------------------------------------------
-     首屏环境动效：云与落叶的缓慢飘动。
-     只在 hero 区域，不与滚动联动（见 ADR-0005）。
-     prefers-reduced-motion 时由上面的兜底规则关掉。
-     ------------------------------------------------------------------ */
-  @keyframes drift {
-    from {
-      transform: translateX(0);
-    }
-    to {
-      transform: translateX(28px);
-    }
-  }
-  @keyframes sway {
-    0%,
-    100% {
-      transform: translateY(0) rotate(-2deg);
-    }
-    50% {
-      transform: translateY(-10px) rotate(2deg);
-    }
-  }
-  .drift {
-    animation: drift 9s ease-in-out infinite alternate;
-  }
-  .sway {
-    animation: sway 7s ease-in-out infinite;
   }
 
   /* ------------------------------------------------------------------
