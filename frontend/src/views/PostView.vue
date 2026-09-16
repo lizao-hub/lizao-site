@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, watchEffect } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import PixelIcon from '@/components/PixelIcon.vue'
+import LineIcon from '@/components/LineIcon.vue'
 import { findPost, postBody } from '@/data/posts'
 import { shortDate } from '@/utils/date'
 import { renderNote } from '@/utils/markdown'
@@ -24,7 +24,7 @@ watchEffect(() => {
       to="/notes"
       class="rule-link inline-flex items-center gap-2 font-mono text-[0.78rem] text-ink-soft hover:text-ink"
     >
-      <PixelIcon name="left" :size="12" />
+      <LineIcon name="left" :size="12" />
       笔记
     </RouterLink>
 
@@ -47,7 +47,7 @@ watchEffect(() => {
 
     <div v-else class="mt-10">
       <p class="text-ink-soft">找不到这篇文章。</p>
-      <RouterLink to="/notes" class="pixel-btn mt-6">返回笔记列表</RouterLink>
+      <RouterLink to="/notes" class="btn mt-6">返回笔记列表</RouterLink>
     </div>
   </main>
 </template>

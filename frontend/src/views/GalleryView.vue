@@ -31,7 +31,7 @@ const friendOffsets = computed(() => {
     <!-- 我的照片 -->
     <section class="mt-14">
       <h2 class="text-[1.2rem]">我的照片</h2>
-      <div class="pixel-rule mt-4" />
+      <div class="dash-rule mt-4" />
 
       <div v-if="myPhotos.length > 0" class="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         <SectionFade
@@ -51,7 +51,7 @@ const friendOffsets = computed(() => {
 
       <div
         v-else-if="myPhotosIsEmpty"
-        class="mt-6 grid aspect-[4/3] place-items-center border-2 border-dashed border-line px-8 text-center sm:aspect-[16/6]"
+        class="mt-6 grid aspect-[4/3] place-items-center border border-dashed border-line px-8 text-center sm:aspect-[16/6]"
       >
         <p class="max-w-[34rem] text-[0.9rem] leading-relaxed text-ink-soft">
           这里还空着。把压过的照片放进
@@ -64,7 +64,7 @@ const friendOffsets = computed(() => {
     <!-- 朋友的照片 -->
     <section class="mt-16">
       <h2 class="text-[1.2rem]">朋友的照片</h2>
-      <div class="pixel-rule mt-4" />
+      <div class="dash-rule mt-4" />
 
       <p v-if="friendAlbums.length === 0" class="mt-6 text-[0.9rem] text-ink-soft">
         照片还在路上。

@@ -29,6 +29,10 @@ frontend/__screenshots__/
 
 # 照片处理：原图不入库，只提交压缩后的成品
 frontend/photos_raw/
+backend/photos_raw/
+
+# 字体子集脚本的中间产物（npm run subset-font 会重新生成）
+frontend/glyph-set.txt
 
 # ============================================
 # 后端 (backend/)

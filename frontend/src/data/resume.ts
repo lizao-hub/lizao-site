@@ -5,7 +5,7 @@
  */
 
 export const profile = {
-  name: '李泽敖',
+  name: 'LI枣的自留地',
   /** 一句话定位，首页首屏和关于页共用 */
   role: '数学硕士研究生 · 工业时序大模型 / AI Agent',
   tagline:
@@ -13,7 +13,7 @@ export const profile = {
   github: 'https://github.com/lizao-hub',
   githubLabel: '@lizao-hub',
   /** 首页展示的重点方向标签 */
-  focus: ['工业时序大模型', '工业软测量', 'RAG 检索增强', 'AI Agent', 'PyTorch', 'FastAPI'],
+  focus: ['工业时序大模型', '工业软测量', 'RAG 检索增强', 'AI Agent', 'PyTorch'],
 } as const
 
 /** 首页的数字摘要。全部可在简历中核对，不做无来源的数字。 */

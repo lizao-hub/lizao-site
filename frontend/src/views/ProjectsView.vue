@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
-import PixelIcon from '@/components/PixelIcon.vue'
+import LineIcon from '@/components/LineIcon.vue'
 import SectionFade from '@/components/SectionFade.vue'
 import SkillTag from '@/components/SkillTag.vue'
 import { projectsByDate } from '@/data/projects'
@@ -38,7 +38,7 @@ import { projectsByDate } from '@/data/projects'
 
         <ul v-if="project.metrics" class="mt-5 flex flex-wrap gap-x-8 gap-y-4">
           <li v-for="metric in project.metrics" :key="metric.label">
-            <p class="pixel-num text-[1.05rem]">
+            <p class="figure text-[1.05rem]">
               {{ metric.value }}<span v-if="metric.unit" class="text-[0.75rem]">{{ metric.unit }}</span>
             </p>
             <p class="mt-1.5 text-[0.75rem] text-ink-soft">{{ metric.label }}</p>
@@ -56,7 +56,7 @@ import { projectsByDate } from '@/data/projects'
           class="mt-6 inline-flex items-center gap-2 font-mono text-[0.78rem] text-accent"
         >
           查看详情
-          <PixelIcon name="arrow" :size="12" />
+          <LineIcon name="arrow" :size="12" />
         </RouterLink>
       </SectionFade>
     </div>

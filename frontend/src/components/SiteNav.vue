@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import PixelIcon from '@/components/PixelIcon.vue'
+import LineIcon from '@/components/LineIcon.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import { profile } from '@/data/resume'
 
@@ -35,13 +35,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 
 <template>
   <header
-    class="sticky top-0 border-b-2 border-line bg-paper"
+    class="sticky top-0 border-b border-line bg-paper/95 backdrop-blur-sm"
     :style="{ zIndex: 'var(--z-nav)' }"
   >
     <nav aria-label="主导航" class="shell flex h-16 items-center justify-between gap-4">
       <RouterLink to="/" class="flex shrink-0 items-center gap-2.5" aria-label="回到首页">
-        <span class="pixel-logo" aria-hidden="true">LZ</span>
-        <span class="text-[0.95rem] font-semibold text-ink">{{ profile.name }}</span>
+        <span class="wordmark">{{ profile.name }}</span>
       </RouterLink>
 
       <div class="flex items-center gap-3 sm:gap-4">
@@ -49,7 +48,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
           <li v-for="link in links" :key="link.to" class="relative">
             <RouterLink
               :to="link.to"
-              class="rule-link text-[0.875rem] transition-colors duration-150 ease-pixel"
+              class="rule-link text-[0.875rem] transition-colors duration-200"
               :class="isActive(link.to) ? 'text-accent' : 'text-ink-soft hover:text-ink'"
             >
               {{ link.label }}
@@ -66,23 +65,23 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
           :href="profile.github"
           target="_blank"
           rel="noopener noreferrer"
-          class="hidden items-center gap-1.5 border-2 border-line px-2.5 py-1.5 font-mono text-[0.75rem] text-ink-soft transition-colors duration-150 ease-pixel hover:border-accent hover:text-accent sm:inline-flex"
+          class="tag hidden gap-1.5 transition-colors duration-200 hover:border-accent hover:text-accent sm:inline-flex"
         >
           GitHub
-          <PixelIcon name="external" :size="12" />
+          <LineIcon name="external" :size="12" />
         </a>
 
         <ThemeToggle />
 
         <button
           type="button"
-          class="flex h-9 w-9 items-center justify-center border-2 border-line text-ink-soft transition-colors duration-150 ease-pixel hover:border-accent hover:text-accent md:hidden"
+          class="flex h-9 w-9 items-center justify-center rounded-[10px_7px_11px_8px/8px_11px_7px_10px] border border-line text-ink-soft transition-colors duration-200 hover:border-accent hover:text-accent md:hidden"
           :aria-label="open ? '关闭菜单' : '打开菜单'"
           :aria-expanded="open"
           aria-controls="mobile-nav"
           @click="open = !open"
         >
-          <PixelIcon :name="open ? 'close' : 'menu'" :size="14" />
+          <LineIcon :name="open ? 'close' : 'menu'" :size="14" />
         </button>
       </div>
     </nav>
@@ -90,7 +89,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
     <div
       v-if="open"
       id="mobile-nav"
-      class="absolute inset-x-0 top-16 border-b-2 border-line bg-paper md:hidden"
+      class="absolute inset-x-0 top-16 border-b border-line bg-paper md:hidden"
     >
       <ul class="shell flex flex-col py-2">
         <li v-for="link in links" :key="link.to" class="border-b border-line last:border-b-0">
@@ -110,7 +109,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
             class="inline-flex items-center gap-2 py-2 font-mono text-[0.85rem] text-ink-soft"
           >
             GitHub
-            <PixelIcon name="external" :size="12" />
+            <LineIcon name="external" :size="12" />
           </a>
         </li>
       </ul>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
-import PixelIcon from '@/components/PixelIcon.vue'
+import LineIcon from '@/components/LineIcon.vue'
 import type { PhotoItem } from '@/types/photo'
 
 const props = defineProps<{
@@ -75,7 +75,7 @@ onBeforeUnmount(() => {
           <img
             :src="active.src"
             :alt="`${active.albumName}的第 ${active.index} 张照片`"
-            class="max-h-[80dvh] max-w-full border-2 border-[color:var(--veil-ink)] object-contain"
+            class="max-h-[80dvh] max-w-full border border-[color:var(--veil-ink)] object-contain"
             decoding="async"
           />
         </div>
@@ -92,31 +92,31 @@ onBeforeUnmount(() => {
         <button
           ref="closeButton"
           type="button"
-          class="absolute right-4 top-4 flex h-10 w-10 items-center justify-center border-2 border-[color:var(--veil-ink)] transition-opacity duration-150 ease-pixel hover:opacity-60"
+          class="absolute right-4 top-4 flex h-10 w-10 items-center justify-center border border-[color:var(--veil-ink)] transition-opacity duration-200 hover:opacity-60"
           aria-label="关闭"
           @click="close"
         >
-          <PixelIcon name="close" :size="14" />
+          <LineIcon name="close" :size="14" />
         </button>
 
         <button
           v-if="photos.length > 1"
           type="button"
-          class="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center border-2 border-[color:var(--veil-ink)] transition-opacity duration-150 ease-pixel hover:opacity-60 sm:left-6"
+          class="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center border border-[color:var(--veil-ink)] transition-opacity duration-200 hover:opacity-60 sm:left-6"
           aria-label="上一张"
           @click="step(-1)"
         >
-          <PixelIcon name="left" :size="14" />
+          <LineIcon name="left" :size="14" />
         </button>
 
         <button
           v-if="photos.length > 1"
           type="button"
-          class="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center border-2 border-[color:var(--veil-ink)] transition-opacity duration-150 ease-pixel hover:opacity-60 sm:right-6"
+          class="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center border border-[color:var(--veil-ink)] transition-opacity duration-200 hover:opacity-60 sm:right-6"
           aria-label="下一张"
           @click="step(1)"
         >
-          <PixelIcon name="right" :size="14" />
+          <LineIcon name="right" :size="14" />
         </button>
       </div>
     </Transition>

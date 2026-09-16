@@ -1,5 +1,5 @@
-/** 像素图标的可用名字，见 components/PixelIcon.vue */
-export type PixelIconName =
+/** 手绘线条图标的可用名字，见 components/LineIcon.vue */
+export type LineIconName =
   | 'sun'
   | 'moon'
   | 'close'
@@ -11,3 +11,12 @@ export type PixelIconName =
   | 'dot'
   | 'menu'
   | 'terminal'
+  | 'clock'
+  | 'pin'
+  | 'flame'
+  | 'comment'
+  | 'thumb'
+  | 'image'
+  | 'leaf'
+  | 'water'
+  | 'paw'

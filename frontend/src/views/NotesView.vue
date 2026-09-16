@@ -10,17 +10,17 @@ import { postsByDate } from '@/data/posts'
       <h1 class="text-[1.8rem] leading-tight sm:text-[2rem]">笔记</h1>
       <p class="mt-5 max-w-[40rem] text-[0.95rem] leading-[1.9] text-ink-soft">
         简历之外的技术补充：写代码时踩过的坑、读源码的方法、以及一些顺手记下来的结论。
-      </p>
-    </header>
+      </p>    </header>
 
-    <div class="mt-12 space-y-12">
+    <div class="mt-12 space-y-14 sm:space-y-16">
       <SectionFade
         v-for="(post, i) in postsByDate"
         :key="post.slug"
         as="div"
         :delay="i * 60"
       >
-        <NoteEntry :post="post" />
+        <!-- 偶数条图在左，奇数条图在右，交替往下 -->
+        <NoteEntry :post="post" :flip="i % 2 === 1" :eager="i < 2" />
       </SectionFade>
     </div>
   </main>

@@ -1,0 +1,27 @@
+<!--
+  站点图标：导航栏左上角那枚像素字标的同款。
+  复古蓝底 + 深墨描边 + 米白 LZ，和 .pixel-logo 一个语言。
+  纯手绘点阵，不引图标库，不依赖字体（浏览器标签页渲染不了 webfont）。
+
+  26x26 单位 = 2px 描边 + 22x22 画布。
+  绘图区 y 6..20、x 5..21，字形几乎顶满，缩到 16px 也不显小。
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 26" width="64" height="64">
+  <rect x="0" y="0" width="26" height="26" fill="#14161a" />
+  <rect x="2" y="2" width="22" height="22" fill="#2b4bd6" />
+
+  <g fill="#f7f8fa">
+    <!-- L：竖笔 + 底横 -->
+    <rect x="5" y="6" width="2" height="13" />
+    <rect x="5" y="17" width="7" height="2" />
+
+    <!-- Z：上横 + 2px 斜笔 + 下横。斜笔多铺一格，接上底横，16px 下不断。 -->
+    <rect x="14" y="6" width="7" height="2" />
+    <rect x="14" y="8" width="2" height="2" />
+    <rect x="15" y="10" width="2" height="2" />
+    <rect x="16" y="12" width="2" height="2" />
+    <rect x="17" y="14" width="2" height="2" />
+    <rect x="18" y="16" width="2" height="1" />
+    <rect x="14" y="17" width="7" height="2" />
+  </g>
+</svg>

@@ -4,7 +4,7 @@ import { RouterLink } from 'vue-router'
 import SectionFade from '@/components/SectionFade.vue'
 import SkillTag from '@/components/SkillTag.vue'
 import PhotoTile from '@/components/PhotoTile.vue'
-import PixelIcon from '@/components/PixelIcon.vue'
+import LineIcon from '@/components/LineIcon.vue'
 import { highlights, profile } from '@/data/resume'
 import { projectsByDate } from '@/data/projects'
 import { postsByDate } from '@/data/posts'
@@ -16,21 +16,20 @@ const recentPosts = computed(() => postsByDate.slice(0, 3))
 
 <template>
   <main>
-    <!-- 首屏：姓名、一句话定位、方向标签、两个入口，右侧一张真实照片 -->
-    <section class="pixel-grid border-b-2 border-line">
+    <!-- 首屏：姓名、一句话定位、方向标签、两个入口，右侧一张真实照片。 -->
+    <section class="hero border-b border-line">
       <div
-        class="shell grid gap-12 py-14 sm:py-16 lg:grid-cols-[1.4fr_0.9fr] lg:items-center lg:gap-16"
+        class="shell grid gap-6 py-8 sm:gap-12 sm:py-16 lg:grid-cols-[1.4fr_0.9fr] lg:items-center lg:gap-16"
       >
         <div>
           <p class="font-mono text-[0.72rem] tracking-[0.12em] text-accent">
-            杭州师范大学 · 数学硕士研究生
+            杭州师范大学 · 在读
           </p>
 
           <h1 class="mt-5 text-[2rem] leading-tight sm:text-[2.6rem]">{{ profile.name }}</h1>
-
-          <p class="mt-4 text-[1.05rem] leading-relaxed text-ink sm:text-[1.15rem]">
+          <!-- <p class="mt-4 text-[1.05rem] leading-relaxed text-ink sm:text-[1.15rem]">
             {{ profile.role }}
-          </p>
+          </p> -->
 
           <p class="mt-4 max-w-[34rem] text-[0.95rem] leading-[1.9] text-ink-soft">
             {{ profile.tagline }}
@@ -43,15 +42,15 @@ const recentPosts = computed(() => postsByDate.slice(0, 3))
           </ul>
 
           <div class="mt-9 flex flex-wrap gap-4">
-            <RouterLink to="/projects" class="pixel-btn pixel-btn--primary">
+            <RouterLink to="/projects" class="btn btn--primary">
               查看项目
-              <PixelIcon name="arrow" :size="13" />
+              <LineIcon name="arrow" :size="13" />
             </RouterLink>
-            <RouterLink to="/about" class="pixel-btn">关于我</RouterLink>
+            <RouterLink to="/about" class="btn">关于我</RouterLink>
           </div>
         </div>
 
-        <div v-if="heroPhoto" class="mx-auto w-full max-w-[22rem] lg:max-w-none">
+        <div v-if="heroPhoto" class="mx-auto w-full max-w-[11rem] sm:max-w-[13rem] lg:max-w-none">
           <span class="portrait-frame" :style="{ aspectRatio: '4 / 5' }">
             <img
               :src="heroPhoto.src"
@@ -65,18 +64,20 @@ const recentPosts = computed(() => postsByDate.slice(0, 3))
       </div>
     </section>
 
-    <!-- 数字摘要：全部能在简历里核对 -->
-    <section class="border-b-2 border-line">
+    <div class="page-bottom" />
+
+    <!-- 数字摘要：全部能在简历里核对
+    <section class="border-b border-line">
       <div class="shell grid gap-8 py-10 sm:grid-cols-3">
         <div v-for="item in highlights" :key="item.label" class="flex items-baseline gap-3">
-          <p class="pixel-num text-[1.4rem]">{{ item.value }}<span class="text-[0.85rem]">{{ item.unit }}</span></p>
+          <p class="figure text-[1.4rem]">{{ item.value }}<span class="text-[0.85rem]">{{ item.unit }}</span></p>
           <p class="text-[0.85rem] leading-relaxed text-ink-soft">{{ item.label }}</p>
         </div>
       </div>
-    </section>
+    </section> -->
 
     <!-- 精选项目：第一个项目跨两列，后面两个各占一列 -->
-    <section class="shell page-top">
+    <!-- <section class="shell page-top">
       <SectionFade>
         <h2 class="text-[1.3rem]">精选项目</h2>
       </SectionFade>
@@ -88,7 +89,7 @@ const recentPosts = computed(() => postsByDate.slice(0, 3))
           as="article"
           :delay="i * 70"
           :class="[
-            'flex flex-col border-2 border-line bg-surface p-6 transition-colors duration-150 ease-pixel hover:border-accent',
+            'card flex flex-col p-6 transition-colors duration-200 hover:border-accent',
             i === 0 ? 'md:col-span-2' : '',
           ]"
         >
@@ -100,7 +101,7 @@ const recentPosts = computed(() => postsByDate.slice(0, 3))
 
           <ul v-if="project.metrics" class="mt-5 flex flex-wrap gap-x-8 gap-y-4">
             <li v-for="metric in project.metrics" :key="metric.label">
-              <p class="pixel-num text-[1.05rem]">
+              <p class="figure text-[1.05rem]">
                 {{ metric.value }}<span v-if="metric.unit" class="text-[0.75rem]">{{ metric.unit }}</span>
               </p>
               <p class="mt-1.5 text-[0.75rem] text-ink-soft">{{ metric.label }}</p>
@@ -118,14 +119,14 @@ const recentPosts = computed(() => postsByDate.slice(0, 3))
             class="mt-6 inline-flex items-center gap-2 self-start font-mono text-[0.78rem] text-accent"
           >
             查看详情
-            <PixelIcon name="arrow" :size="12" />
+            <LineIcon name="arrow" :size="12" />
           </RouterLink>
         </SectionFade>
       </div>
-    </section>
+    </section> -->
 
     <!-- 最近笔记 -->
-    <section class="sheet page-top page-bottom">
+    <!-- <section class="sheet page-top page-bottom">
       <SectionFade class="flex items-end justify-between gap-6">
         <h2 class="text-[1.3rem]">最近笔记</h2>
         <RouterLink
@@ -147,13 +148,13 @@ const recentPosts = computed(() => postsByDate.slice(0, 3))
             <p class="font-mono text-[0.72rem] text-ink-soft">
               {{ post.tags.join(' / ') }}
             </p>
-            <h3 class="mt-2 text-[1.05rem] leading-[1.7] text-ink transition-colors duration-150 ease-pixel group-hover:text-accent">
+            <h3 class="mt-2 text-[1.05rem] leading-[1.7] text-ink transition-colors duration-200 group-hover:text-accent">
               {{ post.title }}
             </h3>
             <p class="mt-2 text-[0.9rem] leading-[1.85] text-ink-soft">{{ post.summary }}</p>
           </RouterLink>
         </SectionFade>
       </div>
-    </section>
+    </section> -->
   </main>
 </template>

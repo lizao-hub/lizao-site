@@ -8,3 +8,8 @@ export function longDate(iso: string): string {
   const [year = '', month = '1', day = '1'] = iso.split('-')
   return `${year} 年 ${Number(month)} 月 ${Number(day)} 日`
 }
+
+/** 笔记卡片顶部的发布行：发布于 2026.08.14 */
+export function publishedAt(iso: string): string {
+  return `发布于 ${shortDate(iso)}`
+}

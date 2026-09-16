@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
-import PixelIcon from '@/components/PixelIcon.vue'
+import LineIcon from '@/components/LineIcon.vue'
 import SectionFade from '@/components/SectionFade.vue'
 import SkillTag from '@/components/SkillTag.vue'
 import { assistantship, awards, education, papers, profile, skillGroups } from '@/data/resume'
@@ -22,7 +22,7 @@ import { assistantship, awards, education, papers, profile, skillGroups } from '
     <!-- 教育背景 -->
     <section class="mt-16">
       <h2 class="text-[1.2rem]">教育背景</h2>
-      <div class="pixel-rule mt-4" />
+      <div class="dash-rule mt-4" />
       <div class="mt-6 space-y-8">
         <SectionFade
           v-for="item in education"
@@ -48,14 +48,14 @@ import { assistantship, awards, education, papers, profile, skillGroups } from '
     <!-- 技术能力：四大类，一类一块 -->
     <section class="mt-16">
       <h2 class="text-[1.2rem]">技术能力</h2>
-      <div class="pixel-rule mt-4" />
+      <div class="dash-rule mt-4" />
       <div class="mt-6 grid gap-6 sm:grid-cols-2">
         <SectionFade
           v-for="(group, i) in skillGroups"
           :key="group.title"
           as="article"
           :delay="i * 60"
-          class="border-2 border-line bg-surface p-5"
+          class="card p-5"
         >
           <h3 class="text-[1rem] leading-[1.6]">{{ group.title }}</h3>
           <p class="mt-2 text-[0.875rem] leading-[1.8] text-ink-soft">{{ group.summary }}</p>
@@ -71,11 +71,11 @@ import { assistantship, awards, education, papers, profile, skillGroups } from '
     <!-- 科研成果 -->
     <section class="mt-16">
       <h2 class="text-[1.2rem]">科研成果</h2>
-      <div class="pixel-rule mt-4" />
+      <div class="dash-rule mt-4" />
       <ul class="mt-6 space-y-6">
         <SectionFade v-for="paper in papers" :key="paper.title" as="li">
           <div class="flex flex-wrap items-center gap-3">
-            <span class="pixel-badge">{{ paper.status }}</span>
+            <span class="badge">{{ paper.status }}</span>
             <span class="font-mono text-[0.75rem] text-ink-soft">{{ paper.venue }} · {{ paper.role }}</span>
           </div>
           <p class="mt-3 text-[0.925rem] leading-[1.8]">{{ paper.title }}</p>
@@ -86,7 +86,7 @@ import { assistantship, awards, education, papers, profile, skillGroups } from '
     <!-- 竞赛获奖：一行一条，不展开 -->
     <section class="mt-16">
       <h2 class="text-[1.2rem]">竞赛获奖</h2>
-      <div class="pixel-rule mt-4" />
+      <div class="dash-rule mt-4" />
       <ul class="mt-6 space-y-4">
         <SectionFade
           v-for="award in awards"
@@ -104,7 +104,7 @@ import { assistantship, awards, education, papers, profile, skillGroups } from '
     <!-- 其他 -->
     <section class="mt-16">
       <h2 class="text-[1.2rem]">其他</h2>
-      <div class="pixel-rule mt-4" />
+      <div class="dash-rule mt-4" />
       <div class="mt-6">
         <h3 class="text-[1rem]">
           {{ assistantship.role }}
@@ -120,10 +120,10 @@ import { assistantship, awards, education, papers, profile, skillGroups } from '
         :href="profile.github"
         target="_blank"
         rel="noopener noreferrer"
-        class="pixel-btn"
+        class="btn"
       >
         GitHub {{ profile.githubLabel }}
-        <PixelIcon name="external" :size="13" />
+        <LineIcon name="external" :size="13" />
       </a>
     </div>
 

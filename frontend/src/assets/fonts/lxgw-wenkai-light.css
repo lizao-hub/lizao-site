@@ -1,0 +1,17 @@
+/*
+ * 标题字体：霞鹜文楷 Light（子集）
+ *
+ * 这个文件手写而不是用 @fontsource：上游没有做 unicode-range 切片，
+ * 整包 woff2 有 8.8 MB，必须只带本站在用的字。
+ * 子集的生成方式见同目录的 README.md。
+ *
+ * 只声明 300 一个字重。霞鹜文楷的 Light 本身就是偏细的设计，
+ * 再叠一层合成加粗会糊掉。标题在 main.css 里统一走 font-weight: 300。
+ */
+@font-face {
+  font-family: 'LXGW WenKai';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url('./lxgw-wenkai-light-subset.woff2') format('woff2');
+}

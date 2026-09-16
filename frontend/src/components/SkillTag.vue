@@ -3,5 +3,5 @@ defineProps<{ label: string }>()
 </script>
 
 <template>
-  <span class="pixel-tag">{{ label }}</span>
+  <span class="tag">{{ label }}</span>
 </template>

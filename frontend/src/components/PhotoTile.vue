@@ -24,10 +24,10 @@ const emit = defineEmits<{ (event: 'open'): void }>()
 </script>
 
 <template>
-  <button type="button" class="pixel-photo" @click="emit('open')">
-    <span class="pixel-photo__frame" :style="{ aspectRatio: ratio }">
+  <button type="button" class="photo" @click="emit('open')">
+    <span class="photo__frame" :style="{ aspectRatio: ratio }">
       <img
-        class="pixel-photo__img"
+        class="photo__img"
         :src="src"
         :alt="alt"
         :loading="eager ? 'eager' : 'lazy'"
@@ -35,6 +35,6 @@ const emit = defineEmits<{ (event: 'open'): void }>()
         decoding="async"
       />
     </span>
-    <span v-if="caption" class="pixel-photo__caption">{{ caption }}</span>
+    <span v-if="caption" class="photo__caption">{{ caption }}</span>
   </button>
 </template>

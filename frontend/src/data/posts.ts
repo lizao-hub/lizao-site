@@ -1,4 +1,5 @@
 import type { Post } from '@/types/post'
+import { coverOf } from './postCovers'
 
 /**
  * 元信息留在 TypeScript 里（有类型、能排序、列表页直接读），
@@ -46,7 +47,10 @@ export const posts: Post[] = [
 ]
 
 /** 从新到旧。列表和「最近一篇」都读这一份，不要再依赖上面数组的书写顺序。 */
-export const postsByDate: Post[] = [...posts].sort((a, b) => b.date.localeCompare(a.date))
+export const postsByDate: Post[] = [...posts]
+  .sort((a, b) => b.date.localeCompare(a.date))
+  // 封面不在元信息里手写，由 notes-cover/ 目录自动匹配 slug
+  .map((post) => ({ ...post, cover: coverOf(post.slug) }))
 
 export const latestPost: Post | undefined = postsByDate[0]
 
