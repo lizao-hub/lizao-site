@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import HomeView from '@/views/HomeView.vue'
-import ProjectsView from '@/views/ProjectsView.vue'
 import AboutView from '@/views/AboutView.vue'
 import NotesView from '@/views/NotesView.vue'
 import GalleryView from '@/views/GalleryView.vue'
@@ -10,7 +9,7 @@ import { profile } from '@/data/resume'
 const SITE_NAME = profile.name
 
 const DEFAULT_DESCRIPTION =
-  '李泽敖的个人网站：杭州师范大学数学硕士研究生，研究方向为工业时序大模型、工业软测量与 AI Agent 应用。'
+  '李泽敖的个人网站：写的东西、拍的照片，还有一些顺手记下来的结论。'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -20,15 +19,13 @@ const routes: RouteRecordRaw[] = [
     meta: { title: SITE_NAME, description: DEFAULT_DESCRIPTION },
   },
   {
+    // 项目列表页已并入「关于」（见 ADR-0001）。
+    // 旧地址仍可能被外部引用，重定向而不是掉进 404 兜底。
     path: '/projects',
-    name: 'projects',
-    component: ProjectsView,
-    meta: {
-      title: `项目 | ${SITE_NAME}`,
-      description: '三个完整项目：工业垂直大模型微调与 RAG、数据分析 AI Agent、无人机交通流实时分析系统。',
-    },
+    redirect: '/about',
   },
   {
+    // 只保留单项详情，连带留住可分享的深链接。
     path: '/projects/:slug',
     name: 'project',
     component: () => import('@/views/ProjectView.vue'),
@@ -40,7 +37,7 @@ const routes: RouteRecordRaw[] = [
     component: AboutView,
     meta: {
       title: `关于 | ${SITE_NAME}`,
-      description: '教育背景、技术能力、科研成果、竞赛获奖与助教经历。',
+      description: '我是谁、做过什么、写过什么，以及一些不在别处的东西。',
     },
   },
   {
@@ -49,7 +46,7 @@ const routes: RouteRecordRaw[] = [
     component: NotesView,
     meta: {
       title: `笔记 | ${SITE_NAME}`,
-      description: '简历之外的技术笔记：Vue 入门、Python 脚本、读源码的方法与 CSS 布局。',
+      description: '写代码时踩过的坑、读源码的方法，以及一些顺手记下来的结论。',
     },
   },
   {

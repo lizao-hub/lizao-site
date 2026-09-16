@@ -1,6 +1,6 @@
 /**
- * 简历数据。全部来自 doc/RESUME.md。
- * 只保留面向招聘方的信息：教育、能力、项目、科研、竞赛、助教。
+ * 关于页的数据。全部来自 doc/RESUME.md。
+ * 只收录适合公开的部分：教育、能力、项目、科研、竞赛、助教。
  * 实习意向、到岗时间、电话与邮箱按要求不展示。
  */
 
@@ -15,13 +15,6 @@ export const profile = {
   /** 首页展示的重点方向标签 */
   focus: ['工业时序大模型', '工业软测量', 'RAG 检索增强', 'AI Agent', 'PyTorch'],
 } as const
-
-/** 首页的数字摘要。全部可在简历中核对，不做无来源的数字。 */
-export const highlights = [
-  { value: '2', unit: '篇', label: '第一作者论文（1 篇录用 / 1 篇在审）' },
-  { value: '3.8', unit: 'x', label: '推理系统吞吐提升' },
-  { value: '4', unit: '项', label: '省级以上竞赛获奖' },
-] as const
 
 export interface Education {
   school: string
@@ -107,7 +100,7 @@ export interface Award {
   date: string
 }
 
-/** 一行一条，不展开细节：招聘方只需要看到奖项层级、赛事和时间 */
+/** 一行一条，不展开细节：看得见奖项层级、赛事和时间就够了 */
 export const awards: Award[] = [
   { prize: '一等奖', competition: '第十届浙江省大学生电子设计竞赛（嵌入式 / 算法）', date: '2022.8' },
   { prize: '二等奖', competition: '第十四届全国大学生数学竞赛', date: '2023.1' },

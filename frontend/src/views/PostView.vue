@@ -22,7 +22,7 @@ watchEffect(() => {
   <main class="sheet page-top page-bottom">
     <RouterLink
       to="/notes"
-      class="rule-link inline-flex items-center gap-2 font-mono text-[0.78rem] text-ink-soft hover:text-ink"
+      class="rule-link inline-flex items-center gap-2 text-[0.78rem] text-ink-soft hover:text-ink"
     >
       <LineIcon name="left" :size="12" />
       笔记
@@ -31,15 +31,15 @@ watchEffect(() => {
     <template v-if="post">
       <h1 class="mt-8 text-[1.6rem] leading-[1.5] sm:text-[1.9rem]">{{ post.title }}</h1>
 
-      <p class="mt-5 font-mono text-[0.75rem] tracking-[0.04em] text-ink-soft">
+      <p class="mt-5 text-[0.75rem] tracking-[0.04em] text-ink-soft">
         {{ shortDate(post.date) }}
       </p>
 
       <!-- markdown-it 关了 html 和 typographer，正文是自己写的 Markdown -->
       <div class="prose-note mt-12" v-html="html" />
 
-      <footer class="mt-16 border-t-2 border-line pt-6">
-        <p class="font-mono text-[0.72rem] tracking-[0.04em] text-ink-soft">
+      <footer class="mt-16 border-t border-line pt-6">
+        <p class="text-[0.72rem] tracking-[0.04em] text-ink-soft">
           {{ post.tags.join(' / ') }}
         </p>
       </footer>

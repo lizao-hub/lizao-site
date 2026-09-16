@@ -10,7 +10,6 @@ const open = ref(false)
 
 const links = [
   { label: '首页', to: '/' },
-  { label: '项目', to: '/projects' },
   { label: '关于', to: '/about' },
   { label: '笔记', to: '/notes' },
   { label: '影像', to: '/gallery' },

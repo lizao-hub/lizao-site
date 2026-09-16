@@ -125,7 +125,6 @@ function compact(n: number): string {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.72rem;
   letter-spacing: 0.04em;
   color: var(--ink-soft);
@@ -134,8 +133,9 @@ function compact(n: number): string {
 /* --- 标题：单行省略 --- */
 .note-card__title {
   margin-top: 0.7rem;
+  /* 标题字体是霞鹜文楷 Light，合成加粗会糊掉，跟着 main.css 走 300 */
   font-size: 1.08rem;
-  font-weight: 600;
+  font-weight: 300;
   line-height: 1.6;
   min-width: 0;
 }
@@ -146,7 +146,7 @@ function compact(n: number): string {
   gap: 0.4rem;
   color: var(--ink);
   min-width: 0;
-  transition: color 140ms linear;
+  transition: color 200ms linear;
 }
 
 .note-card__pin {
@@ -172,7 +172,6 @@ function compact(n: number): string {
   flex-wrap: wrap;
   gap: 0.15rem 1.1rem;
   margin-top: 0.75rem;
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.72rem;
   color: var(--ink-soft);
 }

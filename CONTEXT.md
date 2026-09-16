@@ -56,6 +56,7 @@
 
 ## 架构约定
 
-- 颜色一律走 `src/assets/main.css` 里的 CSS 变量，Tailwind 只做映射。不允许在组件里写死颜色值。
+- 颜色一律走 `src/assets/main.css` 里的 CSS 变量，Tailwind 只做映射。组件里不允许写死颜色值。
+  （唯一例外：`index.html` 与 `useTheme.ts` 里的首屏底色，它们跑在 CSS 加载之前，用不了变量。）
 - 中文字体走系统栈；只有标题字体是自托管的。
 - `prefers-reduced-motion: reduce` 时必须关掉环境动效。

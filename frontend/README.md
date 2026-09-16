@@ -17,6 +17,7 @@ Vue 3 + Vite + TypeScript + Tailwind v3。纯静态产物，构建完丢给 Ngin
 src/
 ├── assets/
 │   ├── main.css                 设计令牌、手绘零件、Markdown 正文样式
+│   ├── fonts/                   标题字体（霞鹜文楷 Light 子集，见该目录 README）
 │   ├── photos-life/             我的照片（见该目录下的 README）
 │   ├── notes-cover/             笔记封面，文件名 = slug（见该目录下的 README）
 │   └── photos-ta-all/<相册>/    朋友的照片
@@ -25,6 +26,7 @@ src/
 │   ├── SiteFooter.vue
 │   ├── ThemeToggle.vue          明暗切换按钮
 │   ├── LineIcon.vue             手绘线条图标（内联 SVG，不引图标库）
+│   ├── SketchDefs.vue           手绘边框的共享滤镜定义，全站挂一次
 │   ├── SkillTag.vue             技能标签
 │   ├── SectionFade.vue          滚动淡入封装，IntersectionObserver 触发一次
 │   ├── NoteEntry.vue            一条笔记的卡片：封面 + 文字，左右交替
@@ -36,7 +38,7 @@ src/
 ├── content/notes/*.md           文章正文（Markdown）
 ├── data/
 │   ├── resume.ts               关于页数据：教育 / 技能 / 论文 / 竞赛 / 助教
-│   ├── projects.ts              项目数据（列表 + 详情页共用）
+│   ├── projects.ts              项目数据（关于页列表 + 详情页共用）
 │   ├── posts.ts                 文章元信息 + 正文加载 + 排序
 │   ├── postCovers.ts            笔记封面自动收录（文件名 = slug）
 │   ├── postStats.ts             热度 / 评论 / 点赞（目前是模拟数据）

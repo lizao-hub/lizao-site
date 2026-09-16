@@ -24,7 +24,7 @@ const friendOffsets = computed(() => {
     <header>
       <h1 class="text-[1.8rem] leading-tight sm:text-[2rem]">影像</h1>
       <p class="mt-5 max-w-[40rem] text-[0.95rem] leading-[1.9] text-ink-soft">
-        简历之外的部分：我自己拍的照片，和朋友们的照片。点开可以看大图。
+        我自己拍的照片，和朋友们的照片。点开可以看大图。
       </p>
     </header>
 
@@ -55,7 +55,7 @@ const friendOffsets = computed(() => {
       >
         <p class="max-w-[34rem] text-[0.9rem] leading-relaxed text-ink-soft">
           这里还空着。把压过的照片放进
-          <span class="font-mono text-[0.85rem] text-accent">src/assets/photos-life/</span>
+          <span class="text-[0.85rem] text-accent">src/assets/photos-life/</span>
           ，这一格会自己满。
         </p>
       </div>
@@ -71,7 +71,7 @@ const friendOffsets = computed(() => {
       </p>
 
       <div v-for="(album, ai) in friendAlbums" :key="album.album" class="mt-8">
-        <p class="font-mono text-[0.75rem] text-ink-soft">
+        <p class="mt-6 text-[0.75rem] text-ink-soft">
           {{ album.name }} / {{ album.photos.length }} 张
         </p>
 

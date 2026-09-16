@@ -19,11 +19,11 @@ watchEffect(() => {
 <template>
   <main class="sheet page-top page-bottom">
     <RouterLink
-      to="/projects"
-      class="rule-link inline-flex items-center gap-2 font-mono text-[0.78rem] text-ink-soft hover:text-ink"
+      to="/about"
+      class="rule-link inline-flex items-center gap-2 text-[0.78rem] text-ink-soft hover:text-ink"
     >
       <LineIcon name="left" :size="12" />
-      项目
+      关于
     </RouterLink>
 
     <template v-if="project">
@@ -44,7 +44,7 @@ watchEffect(() => {
         </ul>
       </header>
 
-      <!-- 量化结果单独一行，这是招聘方最先看的部分 -->
+      <!-- 做完之后的结果，单独一行，让数字自己说话 -->
       <section v-if="project.metrics" class="card mt-10 p-6">
         <ul class="grid gap-6 sm:grid-cols-3">
           <li v-for="metric in project.metrics" :key="metric.label">
@@ -86,7 +86,7 @@ watchEffect(() => {
               class="group inline-flex items-center gap-2 text-[0.85rem] text-ink-soft transition-colors duration-200 hover:text-accent"
             >
               <LineIcon name="left" :size="12" />
-              更新：{{ neighbours.prev.name }}
+              更早：{{ neighbours.prev.name }}
             </RouterLink>
           </li>
           <li v-if="neighbours.next" class="sm:text-right">
@@ -94,7 +94,7 @@ watchEffect(() => {
               :to="`/projects/${neighbours.next.slug}`"
               class="group inline-flex items-center gap-2 text-[0.85rem] text-ink-soft transition-colors duration-200 hover:text-accent"
             >
-              更早：{{ neighbours.next.name }}
+              更新：{{ neighbours.next.name }}
               <LineIcon name="right" :size="12" />
             </RouterLink>
           </li>
@@ -104,7 +104,7 @@ watchEffect(() => {
 
     <div v-else class="mt-10">
       <p class="text-ink-soft">找不到这个项目。</p>
-      <RouterLink to="/projects" class="btn mt-6">返回项目列表</RouterLink>
+      <RouterLink to="/about" class="btn mt-6">回到关于</RouterLink>
     </div>
   </main>
 </template>
