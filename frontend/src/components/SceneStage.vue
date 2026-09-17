@@ -94,8 +94,7 @@ function zoneStyle(zone: { left: number; top: number; right: number; bottom: num
 
 <template>
   <div class="stage-wrap">
-    <div class="stage" :data-scene="scene.id">
-      <!--
+    <div class="stage" :data-scene="scene.id">      <!--
         一层一层画，**顺序就是 scene.layers 的顺序**：数组前面的在远处。
 
         这里刻意不做「先画布景、再画热点」两轮回圈。之前就是那么写的，
@@ -157,13 +156,42 @@ function zoneStyle(zone: { left: number; top: number; right: number; bottom: num
 
 <style scoped>
 /* ---------- 舞台 ---------- */
+/*
+ * 注意：.stage-wrap 是 position:fixed，所以**任何祖先上的 transform
+ * 都会把它变成那个祖先的子盒**（transform 会创建包含块）。
+ * 场景页的 <main> 子元素全是 fixed，高度本来就是 0，
+ * 一旦 main 带上 transform，这个 inset:0 就会按 0 高度解析，
+ * 整个舞台被推出屏幕（曾经在 room-in 动画上踩过这个坑）。
+ *
+ * 所以约定：**场景页的祖先一律不得有 transform / filter / perspective**。
+ * 入场动画挂在 .stage 自己身上，见下面的 scene-in。
+ * 这里用 100dvh 而不是 inset:0，手机上地址栏收起时不会跳。
+ */
 .stage-wrap {
   position: fixed;
   inset: 0;
+  height: 100vh;
+  height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--scene-paper);
+}
+
+/* 入场：透明 + 极轻的缩放。放在舞台上，不放在祖先上。 */
+.stage {
+  animation: scene-in 1s ease both;
+}
+
+@keyframes scene-in {
+  from {
+    opacity: 0;
+    transform: scale(1.012);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .stage {

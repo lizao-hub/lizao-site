@@ -54,20 +54,18 @@ onBeforeUnmount(() => window.clearTimeout(timer))
 </template>
 
 <style scoped>
-main {
-  animation: room-in 1s ease both;
-}
-
-@keyframes room-in {
-  from {
-    opacity: 0;
-    transform: scale(1.012);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
+/*
+ * 「进屋」的落地感：透明 + 极轻的缩放。
+ *
+ * ⚠️ 这个动画**不能挂在 <main> 上**。room-in 里有 transform，
+ * 而任何非 none 的 transform 都会让元素变成 position:fixed 后代的
+ * 包含块。main 的子元素全部是 fixed，main 自身高度就是 0 ——
+ * 于是 .stage-wrap 的 inset:0 会按 main 的 0 高度解析，
+ * 整个舞台被推到屏幕外（实测 y:-405，正好是舞台高的一半），
+ * 页面看起来就只占了屏幕的一部分。
+ *
+ * 所以动画改由 SceneStage 自己承担，main 保持无 transform。
+ */
 
 /* 「回到湖边」。固定左下角，两种视口下都好按。 */
 .back {
