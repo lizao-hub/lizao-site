@@ -9,10 +9,18 @@ const route = useRoute()
 const open = ref(false)
 
 /**
+ * 压在插画上的导航（屋里页）。去掉底色、边框和毛玻璃，
+ * 否则会在场景天空上切一道实心横条。
+ */
+const props = withDefaults(defineProps<{ transparent?: boolean }>(), {
+  transparent: false,
+})
+
+/**
  * 主导航。只放**能从屋里走到、且真的能读**的页面。
  *
- * 湖边和屋里不在这里：它们是场景，没有导航条（见 ADR-0009）。
- * 想去屋里就从页脚的「屋里」进，或者先回首页再点小木屋。
+ * 湖边不在里面：它是场景，没有导航条（见 ADR-0009）。
+ * 屋里在，但它是透明浮在景上的（transparent 属性）。
  */
 const links = [
   { label: '首页', to: '/' },
@@ -40,7 +48,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 
 <template>
   <header
-    class="sticky top-0 border-b border-line bg-paper/95 backdrop-blur-sm"
+    class="sticky top-0"
+    :class="props.transparent ? 'nav--over-scene' : 'border-b border-line bg-paper/95 backdrop-blur-sm'"
     :style="{ zIndex: 'var(--z-nav)' }"
   >
     <nav aria-label="主导航" class="shell flex h-16 items-center justify-between gap-4">

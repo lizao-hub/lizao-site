@@ -1,17 +1,23 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import SceneStage from '@/components/SceneStage.vue'
-import { resolveScene, roomHint, roomScene } from '@/data/scenes'
+import ResumeSheet from '@/components/ResumeSheet.vue'
+import { resolveScene, roomScene, roomSheet } from '@/data/scenes'
 
 /**
- * 屋里。整站的目录。
+ * 屋里。整站的目录，也是「关于我」。
  *
- * 这一页就是「关于我」：你正站在我的房间里，桌上的东西就是站点的全部内容。
- * 所以它不需要额外放一段自我介绍 —— 三扇门加一句提示就够了。
- * 详细的学历 / 论文 / 比赛在 /projects 的尾部，那里是它们的自然归宿。
+ * 你正站在我的房间里，桌上的东西就是站点的全部内容：
+ * 电脑 → 做过的项目、相机 → 拍下的照片、竖排书 → 笔记。
  *
- * 同首页：没有导航和页脚，出口是左下角的「回到湖边」。
+ * 墙上那张纸片是简历摘要（教育 / 技术能力 / 竞赛），
+ * 位置在笔记本上方，由 roomSheet 给坐标。
+ * 详细的论文与助教在 /projects 尾部。
+ *
+ * 这一页**有导航**（透明浮在景上，见 App.vue），
+ * 因为从搜索引擎直接落到这里的人需要一个出口。
+ * 没有页脚：页脚会把 100vh 的舞台顶下去。
  */
 
 const router = useRouter()
@@ -42,12 +48,18 @@ onBeforeUnmount(() => window.clearTimeout(timer))
 
 <template>
   <main class="scene-page">
-    <SceneStage :scene="scene" :hint="roomHint" @click.capture="onStageClick">
-      <!-- 进屋时的一点落地感。原稿的 room-in 动画。 -->
+    <SceneStage :scene="scene" @click.capture="onStageClick">
+      <!-- 墙上的简历摘要。位置是临时的，后续还要调。 -->
+      <ResumeSheet
+        :left="roomSheet.left"
+        :top="roomSheet.top"
+        :width="roomSheet.width"
+      />
+
       <h1 class="sr-only">屋里 · 我的房间和桌上的东西</h1>
     </SceneStage>
 
-    <RouterLink to="/" class="back">← 回到湖边</RouterLink>
+    <!-- 「回到湖边」按钮已按要求去掉。 -->
 
     <div class="veil-scene" :class="{ 'is-on': veil }" aria-hidden="true" />
   </main>
@@ -55,53 +67,16 @@ onBeforeUnmount(() => window.clearTimeout(timer))
 
 <style scoped>
 /*
- * 「进屋」的落地感：透明 + 极轻的缩放。
+ * 这一页不再有自己的样式。
  *
- * ⚠️ 这个动画**不能挂在 <main> 上**。room-in 里有 transform，
- * 而任何非 none 的 transform 都会让元素变成 position:fixed 后代的
- * 包含块。main 的子元素全部是 fixed，main 自身高度就是 0 ——
- * 于是 .stage-wrap 的 inset:0 会按 main 的 0 高度解析，
- * 整个舞台被推到屏幕外（实测 y:-405，正好是舞台高的一半），
- * 页面看起来就只占了屏幕的一部分。
+ * 曾经在这里挂「进屋」的入场动画，但它把场景推出屏幕了：
+ * room-in 里有 transform，而任何非 none 的 transform 都会让元素
+ * 变成 position:fixed 后代的包含块。main 的子元素全是 fixed，
+ * 自身高度是 0 —— 于是 .stage-wrap 的 inset:0 按 0 高度解析，
+ * 舞台被推到屏幕外（实测 y:-405，正好是舞台高的一半）。
  *
- * 所以动画改由 SceneStage 自己承担，main 保持无 transform。
+ * 现在入场动画由 SceneStage 的 .stage 自己承担（scene-in），
+ * main 保持无 transform。改这一页时记住这条：
+ * **不要给 main 或任何祖先加 transform / filter / perspective。**
  */
-
-/* 「回到湖边」。固定左下角，两种视口下都好按。 */
-.back {
-  position: fixed;
-  left: clamp(14px, 2.2vw, 34px);
-  bottom: clamp(14px, 2.2vw, 30px);
-  z-index: 20;
-  padding: 0.62em 1.7em;
-  border: 1px solid var(--scene-wood);
-  border-radius: 999px;
-  color: var(--scene-wood);
-  background: var(--scene-paper-veil);
-  text-decoration: none;
-  font-size: clamp(11px, 0.95vw, 15px);
-  letter-spacing: 0.24em;
-  text-indent: 0.24em;
-  transition:
-    background-color 300ms ease,
-    color 300ms ease,
-    transform 300ms ease;
-}
-
-.back:hover,
-.back:focus-visible {
-  background: var(--scene-wood);
-  color: var(--scene-paper-warm);
-  transform: translateY(-2px);
-  outline: none;
-}
-
-/* 竖屏：舞台在上方，链接落到舞台下面的空白里，不再固定 */
-@media (max-aspect-ratio: 1 / 1) {
-  .back {
-    position: static;
-    display: inline-block;
-    margin: 1.75rem 0 0 1.25rem;
-  }
-}
 </style>

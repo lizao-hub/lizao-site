@@ -35,7 +35,8 @@ const routes: RouteRecordRaw[] = [
     meta: {
       title: `屋里 | ${SITE_NAME}`,
       description: '我的房间和桌上的东西：读的书、写过的代码、拍下的照片。',
-      scene: true,
+      // 注意：屋里**不是** scene。它有导航（半透明浮在景上），
+      // 因为它同时是「关于我」，需要正常的路由入口。
     },
   },
   {
