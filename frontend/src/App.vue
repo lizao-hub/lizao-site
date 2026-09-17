@@ -11,25 +11,18 @@ const route = useRoute()
  * 场景页自己就是整个页面：100vh 不滚动、没有正文。
  * 给它们加导航和页脚会把景压成一块装饰（见 ADR-0009）。
  *
- * 现在只有湖边是这种页 —— 它没有任何正文，也没有导航，
- * 出口是点小木屋。
- *
- * 屋里（/room）不一样：它同时是「关于我」，所以**有**导航，
- * 但导航要透明浮在景上，而且不要纸感噪点、不要页脚
- * （页脚会把 100vh 的舞台顶下去）。
+ * 只有湖边是这种页 —— 它整页没有导航，出口是点小木屋。
+ * 屋里（/room）**有**导航（透明浮在景上），只是不要页脚和噪点。
  */
 const isScene = computed(() => route.meta.scene === true)
 
-/** 屋里：导航压在插画上，去掉底色和边框，不能把天空切一道。 */
+/**
+ * 屋里：有导航，但不要页脚（舞台是 100vh 且 fixed，页脚会被顶到屏幕外）、
+ * 不要纸感噪点（水彩叠噪点会脏）。
+ */
 const isRoom = computed(() => route.name === 'room')
 
-/**
- * 纸感噪点与页脚：两者都只给普通内容页。
- *
- * 景上不叠噪点（水彩叠噪点会脏），也不给页脚 ——
- * 舞台是 100vh 且 fixed，页脚会被顶到屏幕外，白占一个节点。
- * 两个场景页都不满足这个条件。
- */
+/** 纸感噪点与页脚：两者都只给普通内容页。见上面两条。 */
 const hasChrome = computed(() => !isScene.value && !isRoom.value)
 </script>
 
@@ -44,7 +37,7 @@ const hasChrome = computed(() => !isScene.value && !isRoom.value)
     aria-hidden="true"
   />
 
-  <SiteNav v-if="!isScene" :transparent="isRoom" />
+  <SiteNav v-if="!isScene" />
 
   <!--
     z-10 包住内容，让导航和它同层而不被压在下面。
