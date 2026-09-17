@@ -27,7 +27,10 @@ export interface SceneZone {
 }
 
 export interface SceneHotspot extends SceneLayer {
-  /** 悬停标签的文案。写真实去向，不写物件名 */
+  /**
+   * 可访问名字。**不再显示成悬停标签**——悬停标签已整个拿掉。
+   * 给读屏用；也方便以后想恢复时现成有一句话。
+   */
   label: string
   /** 目标路由 */
   to: string

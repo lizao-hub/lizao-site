@@ -72,6 +72,9 @@ const drawList = computed<SceneLayer[]>(() => {
  * 曾经有一个「组」的概念（三叠书一起缩放），靠一个 activeGroups
  * 状态把 is-group-active 挂到整组上。现在只有一叠书可点，
  * 那个机制连同类型里的 group 字段一起拿掉了。
+ *
+ * 悬停标签（鼠标移到物件上弹出来的文字）也已整个拿掉。
+ * label 字段现在只用于 aria-label，不再渲染成可见的 .tag。
  */
 
 function layerStyle(layer: SceneLayer) {
@@ -141,7 +144,7 @@ function zoneStyle(zone: { left: number; top: number; right: number; bottom: num
             <img :src="layer.src" :alt="hotspotOf(layer.id)!.alt ?? ''" />
           </span>
 
-          <span class="tag">{{ hotspotOf(layer.id)!.label }}</span>
+          <!-- 悬停标签已按要求整个拿掉，不再有鼠标移到物件上弹出的文字。 -->
         </div>
       </template>
 
@@ -259,39 +262,6 @@ function zoneStyle(zone: { left: number; top: number; right: number; bottom: num
   transition: transform 420ms cubic-bezier(0.2, 0.7, 0.3, 1);
 }
 
-/* ---------- 悬停标签 ---------- */
-.tag {
-  position: absolute;
-  left: 50%;
-  bottom: 100%;
-  z-index: 3;
-  margin-bottom: 0.5em;
-  padding: 0.42em 1.1em;
-  white-space: nowrap;
-  border-radius: 999px;
-  background: var(--scene-paper-veil);
-  color: var(--scene-wood);
-  font-size: clamp(10px, 0.8vw, 15px);
-  letter-spacing: 0.18em;
-  text-indent: 0.18em;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateX(-50%);
-  transition: opacity 300ms ease;
-}
-
-.hot:hover .tag,
-.hot:focus-within .tag {
-  opacity: 1;
-}
-
-/* 靠左边的物件：标签左对齐，别跑出画面。
-   相机在最左（29.21%），其余都在它右边。 */
-.stage[data-scene='room'] .hot:first-of-type .tag {
-  left: 0;
-  transform: none;
-}
-
 /* ---------- 顶部提示 ---------- */
 .hint {
   position: absolute;
@@ -388,16 +358,6 @@ function zoneStyle(zone: { left: number; top: number; right: number; bottom: num
     width: 100vw;
     height: auto;
     flex: 0 0 auto;
-  }
-  .tag {
-    display: none;
-  }
-}
-
-/* 悬停标签在触屏上没有意义，也不该吃掉布局 */
-@media (hover: none) {
-  .tag {
-    display: none;
   }
 }
 </style>
