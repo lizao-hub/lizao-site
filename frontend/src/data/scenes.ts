@@ -58,29 +58,38 @@ export const lakeHotspot: SceneHotspot = {
   alt: '红顶小木屋',
 }
 
-/** 屋内：room.html。桌面上的三样可点，杯子和便签只是装饰。 */
+/** 屋内：room.html。只有竖排那叠书可点，杯子只是装饰。 */
 const roomLayers: SceneLayer[] = [
   { id: 'background', src: 'room/background.webp', left: 0, top: 0, width: 100 },
   { id: 'desk', src: 'room/desk.webp', left: 23.7, top: 79.84, width: 69.45 },
 ]
 
-/** 桌面上的小东西，压在热点之上或之下，不接鼠标。 */
-const roomProps: SceneLayer[] = [
-  { id: 'mug', src: 'room/mug.webp', left: 71.56, top: 78.15, width: 4.71 },
-  { id: 'note', src: 'room/note.webp', left: 64.15, top: 84.89, width: 6.14, motion: 'note-lift' },
-]
+/**
+ * 马克杯。只有装饰，不接鼠标。
+ *
+ * 它在 layers 里的位置决定绘制顺序：现在的顺序让它压在竖排书籍之上
+ * （两图在 y 78%~84% 那段确实重叠，所以这个顺序是有意义的）。
+ * 不要再把它往前排。
+ */
+const mugLayer: SceneLayer = {
+  id: 'mug',
+  src: 'room/mug.webp',
+  left: 71.56,
+  top: 78.15,
+  width: 4.71,
+}
 
 /**
- * 三叠书当一个组件：碰任何一叠，三叠一起缩放。
- * 它们共用同一枚 group，也共用同一个去向，所以没有各自的标签
- * （用户明确要求去掉「读过的和没读完的」）。
+ * 只有竖排那叠书是热点，去 /notes。
+ *
+ * 左侧横叠、右侧横叠两叠是**纯装饰**：不成组、不接鼠标、没有任何动画。
+ * 三叠书曾经当一个组件（碰哪一叠都一起缩放），那个行为已按要求拿掉。
  */
 const bookHotspots: SceneHotspot[] = [
   {
     id: 'books-tall',
     label: '书',
     to: '/notes',
-    group: 'books',
     src: 'room/booksTall.webp',
     left: 66.71,
     top: 60.24,
@@ -91,28 +100,12 @@ const bookHotspots: SceneHotspot[] = [
       { left: 77.4, top: 22.1, right: 0.0, bottom: 62.5 },
     ],
   },
-  {
-    id: 'books-left',
-    label: '书',
-    to: '/notes',
-    group: 'books',
-    src: 'room/booksLeft.webp',
-    left: 37.04,
-    top: 71.41,
-    width: 12.5,
-    zones: [{ left: 13.8, top: 0.0, right: 3.9, bottom: 6.5 }],
-  },
-  {
-    id: 'books-right',
-    label: '书',
-    to: '/notes',
-    group: 'books',
-    src: 'room/booksRight.webp',
-    left: 80.02,
-    top: 69.35,
-    width: 11.52,
-    zones: [{ left: 7.3, top: 0.0, right: 0.6, bottom: 4.0 }],
-  },
+]
+
+/** 另外两叠书：只是画，不是门。 */
+const bookDecor: SceneLayer[] = [
+  { id: 'books-left', src: 'room/booksLeft.webp', left: 37.04, top: 71.41, width: 12.5 },
+  { id: 'books-right', src: 'room/booksRight.webp', left: 80.02, top: 69.35, width: 11.52 },
 ]
 
 /**
@@ -156,7 +149,8 @@ const roomDoors: SceneHotspot[] = [
  */
 export const roomScene: Scene = {
   id: 'room',
-  layers: [...roomLayers, ...bookHotspots, ...roomDoors, ...roomProps],
+  /** 这个数组的顺序**就是绘制顺序**（远 → 近），见 SceneStage.vue 的注释。 */
+  layers: [...roomLayers, ...bookDecor, ...bookHotspots, ...roomDoors, mugLayer],
   hotspots: [...bookHotspots, ...roomDoors],
 }
 

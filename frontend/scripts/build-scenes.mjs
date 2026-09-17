@@ -53,7 +53,6 @@ const SCENE_INPUTS = {
     laptop: 'img2/笔记本电脑.png',
     camera: 'img2/复古旁轴相机.png',
     mug: 'img2/米白马克杯.png',
-    note: 'img2/黄色便签纸.png',
   },
 }
 

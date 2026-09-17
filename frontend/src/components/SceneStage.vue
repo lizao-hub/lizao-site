@@ -42,42 +42,37 @@ function onEnter() {
   emit('interact')
 }
 
-/**
- * 当前被碰到的组。只有**组**需要这个状态：三叠书是一个组件，
- * 鼠标落在任何一叠上，三叠要一起缩放，而 CSS 的 :hover 只看得到
- * 鼠标底下的那一个元素，所以得自己记一下。
- *
- * 不成组的物件（电脑、相机）不需要额外的类：.hot:hover .art 就够了。
- * 写成两者都走 is-active 的话，非组的物件永远拿不到那个类，
- * 反而把 CSS 已经做对的事情拆掉。
- */
-const activeGroups = ref(new Set<string>())
-
-function setGroupActive(spot: SceneHotspot, active: boolean) {
-  if (!spot.group) return
-  const next = new Set(activeGroups.value)
-  if (active) next.add(spot.group)
-  else next.delete(spot.group)
-  activeGroups.value = next
-}
-
-/** 只有「被某个在组的成员碰到」的组才亮 */
-function isGroupActive(spot: SceneHotspot): boolean {
-  return Boolean(spot.group && activeGroups.value.has(spot.group))
-}
-
-/** 每组的标签挂在该组第一叠的位置上，一组只有一枚 */
-const groupLabelAnchor = computed(() => {
-  const anchors = new Map<string, SceneHotspot>()
-  for (const spot of props.scene.hotspots) {
-    if (spot.group && !anchors.has(spot.group)) anchors.set(spot.group, spot)
-  }
-  return anchors
+/** 按 id 找热点。图层在渲染时要决定「它是布景还是热点」，查这一次。 */
+const hotspotIndex = computed(() => {
+  const map = new Map<string, SceneHotspot>()
+  for (const spot of props.scene.hotspots) map.set(spot.id, spot)
+  return map
 })
 
-function showLabel(spot: SceneHotspot): boolean {
-  return !spot.group || groupLabelAnchor.value.get(spot.group)?.id === spot.id
+function hotspotOf(id: string): SceneHotspot | undefined {
+  return hotspotIndex.value.get(id)
 }
+
+/**
+ * 实际要画的层，按绘制顺序。
+ *
+ * layers 里的每一层原样保留（顺序就是叠放顺序）；
+ * 不在 layers 里的热点追在后面 —— 两个场景的写法不一样：
+ * 湖景的小屋只写在 hotspots 里，屋内那几个物件两边都写了。
+ * 这里补齐一下，免得一个场景因为少写一行就安静少掉一个热点。
+ */
+const drawList = computed<SceneLayer[]>(() => {
+  const ids = new Set(props.scene.layers.map((layer) => layer.id))
+  const extras = props.scene.hotspots.filter((spot) => !ids.has(spot.id))
+  return [...props.scene.layers, ...extras]
+})
+
+/*
+ * 悬停：只缩放，CSS 的 :hover / :focus-within 就够了。
+ * 曾经有一个「组」的概念（三叠书一起缩放），靠一个 activeGroups
+ * 状态把 is-group-active 挂到整组上。现在只有一叠书可点，
+ * 那个机制连同类型里的 group 字段一起拿掉了。
+ */
 
 function layerStyle(layer: SceneLayer) {
   return {
@@ -100,47 +95,56 @@ function zoneStyle(zone: { left: number; top: number; right: number; bottom: num
 <template>
   <div class="stage-wrap">
     <div class="stage" :data-scene="scene.id">
-      <!-- 布景层：不可点击，只有自身的呼吸 / 摇曳 -->
-      <template v-for="layer in scene.layers" :key="`layer-${layer.id}`">
+      <!--
+        一层一层画，**顺序就是 scene.layers 的顺序**：数组前面的在远处。
+
+        这里刻意不做「先画布景、再画热点」两轮回圈。之前就是那么写的，
+        结果是 layers 的先后完全失效 —— 所有**装饰图层都会被压在所有热点下面**，
+        数据里把马克杯排在书后面也没用（马克杯要浮在书前）。
+        两轮的代价是一个看不见的 z-order bug，不值。
+
+        热点和普通图层的区别只在「接不接鼠标」：
+        热点多一层 .hot 包裹（内含 .zone 可点块和悬停标签）。
+      -->
+      <template v-for="layer in drawList" :key="`layer-${layer.id}`">
+        <!-- 普通布景层：不接鼠标，只有自身极轻的呼吸 / 摇曳 -->
         <span
-          v-if="!scene.hotspots.some((spot) => spot.id === layer.id)"
+          v-if="!hotspotOf(layer.id)"
           class="art-layer"
           :class="layer.motion && `motion-${layer.motion}`"
           :style="layerStyle(layer)"
         >
           <img :src="layer.src" alt="" aria-hidden="true" />
         </span>
-      </template>
 
-      <!-- 热点：物件本体 + 压在它上面的透明可点块 -->
-      <div
-        v-for="spot in scene.hotspots"
-        :key="`hot-${spot.id}`"
-        class="hot"
-        :class="[isGroupActive(spot) && 'is-group-active']"
-        :style="layerStyle(spot)"
-        @pointerenter="onEnter"
-      >
-        <RouterLink
-          class="hot__link"
-          :to="spot.to"
-          :aria-label="spot.label"
-          @pointerenter="setGroupActive(spot, true)"
-          @pointerleave="setGroupActive(spot, false)"
-          @focus="setGroupActive(spot, true); onEnter()"
-          @blur="setGroupActive(spot, false)"
+        <!-- 热点：物件本体 + 压在它上面的透明可点块 -->
+        <div
+          v-else
+          class="hot"
+          :style="layerStyle(layer)"
+          @pointerenter="onEnter"
         >
-          <template v-for="(zone, i) in spot.zones" :key="`zone-${spot.id}-${i}`">
-            <span class="zone" :style="zoneStyle(zone)" />
-          </template>
-        </RouterLink>
+          <RouterLink
+            class="hot__link"
+            :to="hotspotOf(layer.id)!.to"
+            :aria-label="hotspotOf(layer.id)!.label"
+            @focus="onEnter"
+          >
+            <template
+              v-for="(zone, i) in hotspotOf(layer.id)!.zones"
+              :key="`zone-${layer.id}-${i}`"
+            >
+              <span class="zone" :style="zoneStyle(zone)" />
+            </template>
+          </RouterLink>
 
-        <span class="art" :class="spot.motion && `motion-${spot.motion}`">
-          <img :src="spot.src" :alt="spot.alt ?? ''" />
-        </span>
+          <span class="art" :class="layer.motion && `motion-${layer.motion}`">
+            <img :src="layer.src" :alt="hotspotOf(layer.id)!.alt ?? ''" />
+          </span>
 
-        <span v-if="showLabel(spot)" class="tag">{{ spot.label }}</span>
-      </div>
+          <span class="tag">{{ hotspotOf(layer.id)!.label }}</span>
+        </div>
+      </template>
 
       <p v-if="hint" class="hint" :class="{ 'is-quiet': quiet }">
         {{ hint }}
@@ -216,12 +220,9 @@ function zoneStyle(zone: { left: number; top: number; right: number; bottom: num
   border-radius: 6px;
 }
 
-/* 悬停 / 聚焦：只缩放。
-   普通物件靠 :hover / :focus-within 就够；
-   成组的物件（三叠书）额外看 is-group-active，鼠标在任意一叠上，整组一起动。 */
+/* 悬停 / 聚焦：只缩放。 */
 .hot:hover .art,
-.hot:focus-within .art,
-.hot.is-group-active .art {
+.hot:focus-within .art {
   transform: scale(1.035);
 }
 
@@ -252,8 +253,7 @@ function zoneStyle(zone: { left: number; top: number; right: number; bottom: num
 }
 
 .hot:hover .tag,
-.hot:focus-within .tag,
-.hot.is-group-active .tag {
+.hot:focus-within .tag {
   opacity: 1;
 }
 
@@ -306,10 +306,6 @@ function zoneStyle(zone: { left: number; top: number; right: number; bottom: num
   animation: breathe 5.5s ease-in-out infinite;
   transform-origin: 50% 100%;
 }
-.motion-note-lift img {
-  animation: note-lift 7s ease-in-out infinite;
-  transform-origin: 50% 100%;
-}
 
 @keyframes sway {
   0%,
@@ -345,15 +341,6 @@ function zoneStyle(zone: { left: number; top: number; right: number; bottom: num
   }
   50% {
     transform: scale(1.006);
-  }
-}
-@keyframes note-lift {
-  0%,
-  100% {
-    transform: rotate(0deg);
-  }
-  50% {
-    transform: rotate(-1.2deg);
   }
 }
 

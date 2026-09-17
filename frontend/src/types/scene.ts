@@ -1,5 +1,5 @@
 /** 场景分层的自身动效。都只做极轻微的形变，见 ADR-0005 的动效包线。 */
-export type SceneMotion = 'sway' | 'sway-soft' | 'sway-strong' | 'breathe' | 'note-lift'
+export type SceneMotion = 'sway' | 'sway-soft' | 'sway-strong' | 'breathe'
 
 /**
  * 一层布景。坐标全部是**相对 2848×1602 参考画布**的百分比，
@@ -33,7 +33,8 @@ export interface SceneHotspot extends SceneLayer {
   to: string
   /**
    * 同组的热点一起响应悬停 / 聚焦。
-   * 三叠书就是这么当成一个组件的（用户要求）。
+   * 目前没有场景用到（三叠书不再是同一个组件），保留字段是为了以后
+   * 真出现「一组东西共用一个去向」时不用改组件。
    */
   group?: string
   alt?: string
