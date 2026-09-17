@@ -83,7 +83,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 
       <button
         type="button"
-        class="nav-menu-btn md:hidden"
+        class="nav-menu-btn flex md:hidden"
         :aria-label="open ? '关闭菜单' : '打开菜单'"
         :aria-expanded="open"
         aria-controls="mobile-nav"
@@ -142,18 +142,29 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
   color: #fff;
 }
 
-/* 手机菜单按钮：白描边、白图标，跟文字同一套压景规则 */
+/*
+ * 手机菜单按钮。
+ *
+ * ⚠️ 这里**不要写 display**。
+ * 模板上是 `class="nav-menu-btn md:hidden"`，靠 Tailwind 的 md:hidden 控制显隐：
+ * .md\:hidden 与 .nav-menu-btn[data-v-xxx] 权重相同（都是 0,1,0），
+ * 而 scoped 样式在产物里排在 Tailwind 之后 —— 这里一旦写 display:flex，
+ * 它就会在每个宽度下都赢掉 md:hidden，按钮在桌面上也一直显出来。
+ * 居中用 align/justify，尺寸用 width/height，显隐交给 Tailwind。
+ */
 .nav-menu-btn {
-  display: flex;
-  height: 2.25rem;
-  width: 2.25rem;
   align-items: center;
   justify-content: center;
+  height: 2.25rem;
+  width: 2.25rem;
   border: 1.5px solid rgba(255, 255, 255, 0.85);
   border-radius: 10px 7px 11px 8px / 8px 11px 7px 10px;
   color: #fff;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
 }
+
+/* 但 align/justify 只在 display:flex 下生效，所以窄屏（按钮该出现时）
+   还得用 Tailwind 的 flex。模板上是 `flex md:hidden`。 */
 
 /* 键盘焦点：白描边在浅背景上很弱，用 accent 更醒目 */
 .nav-menu-btn:focus-visible {
