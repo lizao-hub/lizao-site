@@ -8,9 +8,15 @@ import { profile } from '@/data/resume'
 const route = useRoute()
 const open = ref(false)
 
+/**
+ * 主导航。只放**能从屋里走到、且真的能读**的页面。
+ *
+ * 湖边和屋里不在这里：它们是场景，没有导航条（见 ADR-0009）。
+ * 想去屋里就从页脚的「屋里」进，或者先回首页再点小木屋。
+ */
 const links = [
   { label: '首页', to: '/' },
-  { label: '关于', to: '/about' },
+  { label: '项目', to: '/projects' },
   { label: '笔记', to: '/notes' },
   { label: '影像', to: '/gallery' },
 ]

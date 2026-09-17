@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import HomeView from '@/views/HomeView.vue'
-import AboutView from '@/views/AboutView.vue'
+import ProjectsView from '@/views/ProjectsView.vue'
 import NotesView from '@/views/NotesView.vue'
 import GalleryView from '@/views/GalleryView.vue'
 import { profile } from '@/data/resume'
@@ -11,34 +11,49 @@ const SITE_NAME = profile.name
 const DEFAULT_DESCRIPTION =
   '李泽敖的个人网站：写的东西、拍的照片，还有一些顺手记下来的结论。'
 
+/**
+ * 站点结构（见 ADR-0009）：
+ *
+ *   /      湖边。整站的门，没有正文也没有导航。
+ *   /room  屋里。整站的目录，点桌上的东西去各个页面。「关于我」就是这一页。
+ *   其余都是可以从屋里走到的内容页，各自带导航。
+ *
+ * /about 已经删掉：屋里那一页承担了它的位置，计算机热点改指向
+ * /projects（做过的东西）。详见 ADR-0009。
+ */
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
     name: 'home',
     component: HomeView,
-    meta: { title: SITE_NAME, description: DEFAULT_DESCRIPTION },
+    meta: { title: SITE_NAME, description: DEFAULT_DESCRIPTION, scene: true },
   },
   {
-    // 项目列表页已并入「关于」（见 ADR-0001）。
-    // 旧地址仍可能被外部引用，重定向而不是掉进 404 兜底。
+    path: '/room',
+    name: 'room',
+    component: () => import('@/views/RoomView.vue'),
+    meta: {
+      title: `屋里 | ${SITE_NAME}`,
+      description: '我的房间和桌上的东西：读的书、写过的代码、拍下的照片。',
+      scene: true,
+    },
+  },
+  {
+    // 电脑热点通向这里。ADR-0001 曾把它折进 /about，现在独立回来，见 ADR-0009。
     path: '/projects',
-    redirect: '/about',
+    name: 'projects',
+    component: ProjectsView,
+    meta: {
+      title: `做过的东西 | ${SITE_NAME}`,
+      description: '做过的项目，以及学历、论文、比赛和助教经历。',
+    },
   },
   {
-    // 只保留单项详情，连带留住可分享的深链接。
+    // 单项详情保留，连带留住可分享的深链接。
     path: '/projects/:slug',
     name: 'project',
     component: () => import('@/views/ProjectView.vue'),
     meta: { title: `项目 | ${SITE_NAME}`, description: DEFAULT_DESCRIPTION },
-  },
-  {
-    path: '/about',
-    name: 'about',
-    component: AboutView,
-    meta: {
-      title: `关于 | ${SITE_NAME}`,
-      description: '我是谁、做过什么、写过什么，以及一些不在别处的东西。',
-    },
   },
   {
     path: '/notes',
