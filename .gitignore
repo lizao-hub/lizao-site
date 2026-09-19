@@ -21,6 +21,8 @@
 node_modules/
 frontend/dist/
 frontend/dist-ssr/
+# `npx vite build --outDir .verify-dist` 的验证产物（改完 CSS/排版跑一遍用的）
+frontend/.verify-dist/
 coverage/
 *.tsbuildinfo
 .eslintcache

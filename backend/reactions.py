@@ -6,16 +6,21 @@
     project_like     slug → 一个累计数
     project_comment  slug → 很多条留言
 
-关于点赞的**防重复**：存在一个诚实的取舍里 ——
+外加一张 `project_liker`（slug + 点赞人 id），只用来回答「**这个人**点过没有」。
 
-- 要真的防住，就得知道「是谁」。记 IP 是最省事的一种，但同一个 WiFi 下
-  的人会互相挡掉，而且要在库里存一份能指向人的东西；
-  记账号则要登录，为一个点赞入口做登录太重了。
-- 所以计数是**服务端累加**、「我点过了」这件事由**浏览器的 localStorage**
-  记住（前端 `data/reactions.ts`）。清了缓存或者换个浏览器可以再点一次。
+关于点赞的**防重复**，2026-09-20 改过一次，现在是：
 
-  对个人站来说这个强度是对的：点赞表达的是「有几个人路过觉得不错」，
-  不是一个要拿去对账的数字。真到了有人刷的地步，再上 IP 指纹也不迟。
+- 后端给每个浏览器发一个**随机 id**（cookie `lizao_liker`，httponly，一年），
+  点赞时把它记进 `project_liker`。主键是 `(slug, liker)`，**同一个人再点就是
+  `INSERT OR IGNORE`，不加分**。`GET /reactions` 顺带回一个 `liked`，
+  前端据此把那颗心画成红色。
+- 记 IP 是最省事的另一种，但同一个 WiFi 下的人会互相挡掉，而且要在库里
+  存一份能指向人的东西；记账号则要登录，为一个点赞入口做登录太重了。
+  cookie 这个折中认的是**设备/浏览器**：换浏览器、清 cookie 就是另一个人，
+  能再点一次。对个人站来说这个强度是对的 —— 点赞表达的是「有几个人路过
+  觉得不错」，不是一个要拿去对账的数字。
+- 前端的 localStorage 还留着（`data/reactions.ts`），但只是**本地兜底**：
+  cookie 被禁掉时按钮不至于每次进来都能再点。真正的判据是接口那个 `liked`。
 
 关于留言的**防垃圾**：只做三件无需状态的检查 ——
 长度、非空、以及「同一项目下 10 秒内重复提交同样的一句话」会被挡掉
@@ -59,8 +64,13 @@ def _row_to_comment(row: sqlite3.Row) -> dict:
     }
 
 
-def get_reactions(conn: sqlite3.Connection, slug: str) -> dict:
-    """一个项目的点赞数与留言。**详情页一次请求就够**，所以合成一个。"""
+def get_reactions(conn: sqlite3.Connection, slug: str, liker: str | None = None) -> dict:
+    """
+    一个项目的点赞数与留言。**详情页一次请求就够**，所以合成一个。
+
+    `liked` 是「**这个点赞人**有没有点过」—— 传 None（认不出是谁）就是 False。
+    前端拿它决定那颗心是不是红的。
+    """
     likes = conn.execute("SELECT count FROM project_like WHERE slug = ?", (slug,)).fetchone()
     rows = conn.execute(
         "SELECT * FROM project_comment WHERE slug = ? ORDER BY created_at, id", (slug,)
@@ -68,18 +78,39 @@ def get_reactions(conn: sqlite3.Connection, slug: str) -> dict:
     return {
         "slug": slug,
         "likes": likes["count"] if likes else 0,
+        "liked": has_liked(conn, slug, liker),
         "comments": [_row_to_comment(row) for row in rows],
     }
 
 
-def add_like(conn: sqlite3.Connection, slug: str) -> int:
-    """
-    点赞 +1，返回新的累计数。
+def has_liked(conn: sqlite3.Connection, slug: str, liker: str | None) -> bool:
+    """这个人点过没有。**认不出是谁（None）就算没点过** —— 宁可让他再点一次。"""
+    if not liker:
+        return False
+    row = conn.execute(
+        "SELECT 1 FROM project_liker WHERE slug = ? AND liker = ?", (slug, liker)
+    ).fetchone()
+    return row is not None
 
-    一条 UPSERT 而不是「先 SELECT 再 INSERT/UPDATE」：
-    两个请求同时进来时后者会算丢一次。项目没人点赞时表里还没有这一行，
-    所以默认值要写 0 而不是 1。
+
+def add_like(conn: sqlite3.Connection, slug: str, liker: str) -> int:
     """
+    点赞 +1，返回新的累计数。**同一个人再点不再加分。**
+
+    两件事在一个事务里：先往 `project_liker` 插一行认领这次点赞
+    （主键撞了就是点过了，`rowcount == 0`），只有真插进去才去加累计数。
+    所以「重复提交」和「两个人同时点」都不会把数算错 ——
+    累计数仍然是那条 UPSERT，两个请求同时进来时后者不会算丢一次。
+    """
+    cursor = conn.execute(
+        "INSERT OR IGNORE INTO project_liker (slug, liker, created_at) VALUES (?, ?, ?)",
+        (slug, liker, _now()),
+    )
+    if cursor.rowcount == 0:  # 已经点过了，数不动
+        return conn.execute(
+            "SELECT count FROM project_like WHERE slug = ?", (slug,)
+        ).fetchone()["count"]
+
     conn.execute(
         """
         INSERT INTO project_like (slug, count) VALUES (?, 1)

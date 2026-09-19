@@ -45,10 +45,24 @@ def db_path() -> Path:
 
 SCHEMA = """
 -- 一个项目一行。count 是一条累计值，不是「谁点了」的流水 ——
--- 记流水要存身份，那是另一件事（见 reactions.py 顶部）。
+-- 「谁点了」在下面那张 project_liker 里。两张表不等价：
+-- 早期只有累计数（那阵子记没点过靠浏览器），历史的那几个赞没有身份，
+-- count 因此不能由 project_liker 的行数推导。
 CREATE TABLE IF NOT EXISTS project_like (
     slug  TEXT PRIMARY KEY,
     count INTEGER NOT NULL DEFAULT 0
+);
+
+-- 谁点过赞。一行 = 一个项目的一个点赞人，主键就是去重本身。
+--
+-- 只存一个**随机 id**（后端发在 cookie 里的那个）：不存 IP、不存 UA、
+-- 不存账号 —— 能指向一个真人的东西一概不进库。它识别的是「这个浏览器」，
+-- 换浏览器 / 清 cookie 就是另一个人，这是有意的（见 reactions.py 顶部）。
+CREATE TABLE IF NOT EXISTS project_liker (
+    slug       TEXT NOT NULL,
+    liker      TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (slug, liker)
 );
 
 CREATE TABLE IF NOT EXISTS project_comment (

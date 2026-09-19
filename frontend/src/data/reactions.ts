@@ -6,9 +6,14 @@
  * （见 `ProjectGuestbook.vue`），而不是在页面上留一块「加载失败」——
  * 后端没起只是没有留言，正文照样完整，不值得为它扣分。
  *
- * 「我点过赞了」记在浏览器的 localStorage 里，服务端只管累加。
- * 为什么这么选（以及它的代价：清缓存能再点一次）写在
- * `backend/reactions.py` 顶部。
+ * 「点过赞了」这件事，**主判据在服务端**：后端给这个浏览器发一个随机 id
+ * （cookie `lizao_liker`，httponly，一年），点赞时记进 `project_liker`，
+ * 于是清缓存、换标签页回来也认得出，`GET /reactions` 直接回一个 `liked`。
+ *
+ * 下面这两个 localStorage 的读写只是**本地兜底**：cookie 被禁掉时（无痕、
+ * 第三方 cookie 全关）后端每次都认不出人，按钮就会每次都能再点一次 ——
+ * 有它至少同一台机器的同一个浏览器还记着。别把它当防重复用，
+ * 真正的取舍写在 `backend/reactions.py` 顶部。
  */
 import type { Comment, Reactions } from '@/types/reaction'
 
@@ -59,13 +64,17 @@ export async function fetchReactions(slug: string): Promise<Reactions | null> {
   }
 }
 
-/** 点赞 +1。返回新的累计数；失败返回 null，调用方把数字退回去。 */
-export async function postLike(slug: string): Promise<number | null> {
+/**
+ * 点赞。后端**同一个人只算一次**（重复提交不加分），但一律回 `liked: true` ——
+ * 就算这一下没加上分，心也该是红的。失败返回 null，调用方把数字退回去。
+ */
+export async function postLike(slug: string): Promise<{ likes: number; liked: boolean } | null> {
   try {
-    const res = await request<{ likes: number }>(`${API_BASE}/projects/${slug}/likes`, {
-      method: 'POST',
-    })
-    return res.likes
+    const res = await request<{ likes: number; liked: boolean }>(
+      `${API_BASE}/projects/${slug}/likes`,
+      { method: 'POST' },
+    )
+    return { likes: res.likes, liked: res.liked }
   } catch {
     return null
   }

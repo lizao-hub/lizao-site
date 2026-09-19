@@ -31,10 +31,12 @@ FastAPI 后端。两件事：**影像页的照片管理页**、**项目页的点
 from __future__ import annotations
 
 import os
+import re
 from contextlib import asynccontextmanager
 from pathlib import Path
+from uuid import uuid4
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -96,6 +98,43 @@ class CommentPayload(BaseModel):
     body: str
 
 
+# ---------- 点赞的人是谁 ----------
+#
+# 没有登录，所以认的是**这个浏览器**：一个随机 id，放在 cookie 里。
+# 不是账号、不存 IP、不存 UA —— 能指向真人的东西不进库（见 reactions.py 顶部）。
+# 换浏览器 / 清 cookie 就是另一个人，能再点一次，这是有意的。
+LIKER_COOKIE = "lizao_liker"
+LIKER_MAX_AGE = 60 * 60 * 24 * 365  # 一年
+
+# uuid4().hex 的形状。cookie 是客户端能改的东西，只认这个格式，别的当没有。
+LIKER_RE = re.compile(r"^[0-9a-f]{32}$")
+
+
+def liker_id(request: Request, response: Response) -> str:
+    """
+    读这次请求的点赞人 id；没有（或者格式不对）就现发一个，写进响应。
+
+    所以**第一次进详情页就已经有身份了** —— 不用等他点赞。
+    """
+    existing = (request.cookies.get(LIKER_COOKIE) or "").strip().lower()
+    if LIKER_RE.match(existing):
+        return existing
+
+    fresh = uuid4().hex
+    response.set_cookie(
+        LIKER_COOKIE,
+        fresh,
+        max_age=LIKER_MAX_AGE,
+        path="/",
+        httponly=True,  # 前端不需要读它 —— 「我点过没有」由接口回的 liked 说了算
+        samesite="lax",
+        # 站点现在是 http（没有 TLS），不能加 secure，否则 cookie 根本存不下来；
+        # 哪天上了 HTTPS 再打开这一行。
+        # secure=True,
+    )
+    return fresh
+
+
 # 管理页：本地 dev 在 `/` 与 `/admin` 都能进；生产由下面的 SPA 块接管 `/`，
 # 管理页只留在 `/admin`（带删除接口，不该和公开站点抢根路径）。
 @app.get("/admin", include_in_schema=False)
@@ -107,36 +146,41 @@ def admin_page() -> FileResponse:
 
 
 @app.get("/api/projects/{slug}/reactions")
-def get_reactions(slug: str) -> dict:
+def get_reactions(slug: str, request: Request, response: Response) -> dict:
     """
     一个项目的点赞数与留言。**详情页一次请求就够**，所以合成一个返回值：
 
-        { "slug": "...", "likes": 3, "comments": [ { id, name, body, createdAt } ] }
+        { "slug": "...", "likes": 3, "liked": false, "comments": [ ... ] }
 
-    留言按时间从旧到新 —— 读的顺序就是对话的顺序。
+    `liked` 是「**你**点过没有」（按 cookie 里那个 id 查 `project_liker`），
+    前端拿它决定那颗心画不画成红色。留言按时间从旧到新 ——
+    读的顺序就是对话的顺序。
     """
     if not repo.is_valid_slug(slug):
         raise HTTPException(status_code=404, detail="没有这个项目")
+    liker = liker_id(request, response)
     conn = db.connect()
     try:
-        return repo.get_reactions(conn, slug)
+        return repo.get_reactions(conn, slug, liker)
     finally:
         conn.close()
 
 
 @app.post("/api/projects/{slug}/likes")
-def post_like(slug: str) -> dict:
+def post_like(slug: str, request: Request, response: Response) -> dict:
     """
-    点赞 +1，返回新的累计数。
+    点赞 +1，返回 `{ likes, liked }`。
 
-    **防重复由浏览器负责**（localStorage，见前端 `data/reactions.ts`）：
-    服务端只管累加，不记是谁点的。为什么这么选，写在 `reactions.py` 顶部。
+    **同一个人只算一次**：认的是 cookie 里那个 id，重复提交不再加分
+    （`project_liker` 的主键就是 `(slug, liker)`），但依然回 `liked: true` ——
+    前端要把心画成红的。为什么这么选，写在 `reactions.py` 顶部。
     """
     if not repo.is_valid_slug(slug):
         raise HTTPException(status_code=404, detail="没有这个项目")
+    liker = liker_id(request, response)
     conn = db.connect()
     try:
-        return {"slug": slug, "likes": repo.add_like(conn, slug)}
+        return {"slug": slug, "likes": repo.add_like(conn, slug, liker), "liked": True}
     finally:
         conn.close()
 

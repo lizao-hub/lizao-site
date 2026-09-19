@@ -14,7 +14,7 @@
  * 这是这一页的规矩：会失败的东西不该在页面上留下残骸。
  */
 import { computed, ref, watch } from 'vue'
-import { RiHeartLine } from '@remixicon/vue'
+import { RiHeartFill, RiHeartLine } from '@remixicon/vue'
 import { fetchReactions, hasLiked, postComment, postLike, rememberLike } from '@/data/reactions'
 import type { Comment, Reactions } from '@/types/reaction'
 
@@ -23,7 +23,11 @@ const props = defineProps<{ slug: string }>()
 /** 点赞数。null = 还没拿到（后端没起），此时整块不渲染。 */
 const likes = ref<number | null>(null)
 const comments = ref<Comment[]>([])
-/** 这一台浏览器是否已经点过。防重复只靠 localStorage，理由在 data/reactions.ts 顶部。 */
+/**
+ * 这一台浏览器点过没有。
+ * **主判据是接口回的 `liked`**（后端按 cookie 认人，清缓存也认得出）；
+ * localStorage 只是 cookie 被禁时的兜底，所以这里是「或」。
+ */
 const liked = ref(false)
 const name = ref('')
 const body = ref('')
@@ -41,6 +45,7 @@ watch(
     const data: Reactions | null = await fetchReactions(slug)
     if (!data) return
     likes.value = data.likes
+    liked.value = data.liked || hasLiked(slug)
     comments.value = data.comments
   },
   { immediate: true },
@@ -54,14 +59,16 @@ async function like() {
   likes.value = previous + 1
   liked.value = true
 
-  const total = await postLike(props.slug)
-  if (total === null) {
+  const result = await postLike(props.slug)
+  if (result === null) {
     likes.value = previous
     liked.value = false
     error.value = '没记上，等一下再点'
     return
   }
-  likes.value = total
+  // 点过的人再点，后端不再加分，只回累计数 —— 数字以服务端为准
+  likes.value = result.likes
+  liked.value = result.liked
   rememberLike(props.slug)
 }
 
@@ -94,9 +101,12 @@ function formatDate(iso: string): string {
 
 <template>
   <section v-if="likes !== null" class="guestbook">
-    <h2 class="guestbook__lead">留言</h2>
-
+    <!--
+      点赞是这半区唯一「能按下去」的东西，摆在最上面、配上自己的标题——
+      以前缩在「留言」标题底下，基本没人看得见。
+    -->
     <div class="guestbook__row">
+      <h2 class="guestbook__lead">值得一个小心心</h2>
       <button
         type="button"
         class="guestbook__like"
@@ -107,13 +117,17 @@ function formatDate(iso: string): string {
         @click="like"
       >
         <!--
-          点赞图标走 `@remixicon/vue` 的 `RiHeartLine`，矢量、fill=currentColor，
-          颜色由父级 .guestbook__like 的 color + opacity 控制（见下面样式）。
+          点赞图标走 `@remixicon/vue`：没点是 `RiHeartLine`（线稿），
+          点过换 `RiHeartFill`（实心）并涂成 `--heart`，数字仍然是墨色。
         -->
-        <RiHeartLine class="guestbook__thumb" />
+        <RiHeartFill v-if="liked" class="guestbook__thumb is-liked" />
+        <RiHeartLine v-else class="guestbook__thumb" />
         <span class="figure guestbook__count">{{ likes }}</span>
       </button>
+    </div>
 
+    <div class="guestbook__row">
+      <h2 class="guestbook__lead">留言</h2>
       <p class="guestbook__hint">{{ liked ? '记下了' : '觉得不错就点一下' }}</p>
     </div>
 
@@ -168,11 +182,16 @@ function formatDate(iso: string): string {
   color: var(--ink-black);
 }
 
+/* 两行同构：标题在左，内容（按钮 / 小字）落在同一基线上 */
 .guestbook__row {
   display: flex;
   align-items: baseline;
   gap: 0.9rem;
-  margin-top: 1.5rem;
+  margin-top: 1.75rem;
+}
+
+.guestbook__row + .guestbook__row {
+  margin-top: 2rem;
 }
 
 /*
@@ -181,8 +200,8 @@ function formatDate(iso: string): string {
  */
 .guestbook__like {
   display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
+  align-items: baseline;
+  gap: 0.4rem;
   opacity: 0.55;
   color: var(--ink-black);
   transition:
@@ -210,6 +229,19 @@ function formatDate(iso: string): string {
   display: block;
   width: 17px;
   height: 17px;
+  /* 图标没有基线概念，对齐基线要自己抬 */
+  align-self: center;
+  transform: translateY(1px);
+  transition: color 200ms linear;
+}
+
+/*
+ * 点过：实心 + 砖红（`--heart`）。
+ * 图标是 fill=currentColor，所以颜色落在 svg 自己的 color 上，
+ * 不会波及旁边那个数字（它继续吃按钮的墨色）。
+ */
+.guestbook__thumb.is-liked {
+  color: var(--heart);
 }
 
 .guestbook__count {

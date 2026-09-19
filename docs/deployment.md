@@ -129,7 +129,8 @@ id=1  slug=traffic-analyzer  name=李枣  body=111  created_at=2026-09-19T08:21:
 
 **设计要点**
 - **没有 `project` 表**：slug 只存字符串，写入时校验格式（`SLUG_RE`）防注入，不校验「项目存不存在」。slug 权威名单在前端，后端再存一份等于双份维护易对不上。
-- **只存累计数，不存点赞流水**：防重复靠浏览器 `localStorage` 记「我点过了」，服务端只累加（清缓存/换浏览器可再点，个人站够用）。
+- **点赞认「浏览器」不认人**（2026-09-20 起）：`project_like` 仍只存累计数，另有一张 `project_liker(slug, liker, created_at)`（主键 `(slug, liker)` 即去重）记谁点过。身份是后端发的随机 id cookie `lizao_liker`（httponly，一年）；`GET /reactions` 回 `liked`，前端据此把心画成实心砖红。换浏览器/清 cookie 就是另一个人，可再点一次。前端 localStorage 仍是本地兜底（cookie 被禁时）。
+   - 部署提醒：cookie 不带 `secure`（站点是 http）。上了 HTTPS 后打开 `main.py` 里那行 `secure=True`（有注释标着）。
 - **有条索引但不强制外键**：`idx_comment_slug ON project_comment(slug, created_at)` 加速「取某项目留言并排序」；没建外键。
 - **位置可改**：环境变量 `DATABASE_URL=sqlite:////绝对路径/lizao.db` 可把库挪到别处。
 

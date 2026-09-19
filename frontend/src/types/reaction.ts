@@ -22,5 +22,11 @@ export interface Comment {
 export interface Reactions {
   slug: string
   likes: number
+  /**
+   * **我**（这个浏览器）点过没有。后端按 cookie 里那个 id 认人，
+   * 认不出（比如 cookie 被禁）就是 false —— 宁可让你再点一次，也不猜。
+   * 前端拿它决定那颗心画不画成红的。
+   */
+  liked: boolean
   comments: Comment[]
 }
