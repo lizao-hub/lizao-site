@@ -96,7 +96,9 @@ class CommentPayload(BaseModel):
     body: str
 
 
-@app.get("/", include_in_schema=False)
+# 管理页：本地 dev 在 `/` 与 `/admin` 都能进；生产由下面的 SPA 块接管 `/`，
+# 管理页只留在 `/admin`（带删除接口，不该和公开站点抢根路径）。
+@app.get("/admin", include_in_schema=False)
 def admin_page() -> FileResponse:
     return FileResponse(ADMIN_PAGE, media_type="text/html")
 
@@ -244,3 +246,31 @@ def delete_photo(name: str) -> dict:
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return store.list_photos()
+
+
+# ---------- 生产托管：构建好的前端（dist） ----------
+# 只在 dist 目录存在时接管根路径与未匹配路由（SPA 回退到 index.html）。
+# 本地 dev 没有 dist，仍走上面的 `/admin` 管理页。
+# 可用环境变量 DIST_DIR 指向任意位置的 dist（部署时把 dist 放到别处用得上）。
+_DIST_RAW = os.environ.get("DIST_DIR")
+DIST_DIR = (
+    Path(_DIST_RAW).expanduser().resolve()
+    if _DIST_RAW
+    else Path(__file__).resolve().parent.parent / "dist"
+)
+
+if DIST_DIR.is_dir():
+    _spa_assets = DIST_DIR / "assets"
+    if _spa_assets.is_dir():
+        # 构建产物里的 JS/CSS/图片都在 /assets 下，直接按文件发（不走回退）。
+        app.mount("/assets", StaticFiles(directory=_spa_assets), name="spa-assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def spa_index(full_path: str) -> FileResponse:
+        # history 模式下刷新 /projects/foo 这类深链接要回 index.html，
+        # 否则会 404。/api、/media、/assets、/admin 都已先被上面的路由/mount 接走。
+        return FileResponse(DIST_DIR / "index.html", media_type="text/html")
+else:
+    @app.get("/", include_in_schema=False)
+    def admin_index() -> FileResponse:
+        return FileResponse(ADMIN_PAGE, media_type="text/html")

@@ -5,40 +5,51 @@
  * 从上到下三段（和项目页同一种节奏）：
  *   1. 门面图 —— 举着相机取景，取景框里正是湖边那幅景。这页是相机的去向，
  *      图就该是「正透过相机在看」。摆放由 PagePlaceholder 负责。
- *   2. **照片墙** —— `assets/photos/` 下的每张照片，一行三张、正方形。
+ *   2. **照片墙** —— 后端 `/media/photos/` 下的每张照片，一行三张、正方形。
+ *      顺序、增删都由后台管理页控制，前端只负责拉清单渲染。
  *   3. 页尾一句实话（「共 N 张，还会再加。」）—— 由 PagePlaceholder 的
  *      `footnote` 给。**不再有「还在造」那句**：照片就在上面摆着。
  *
- * **加图不用改代码**：`import.meta.glob` 在构建期把目录里的图全收进来。
- * 换一批照片就是换一批文件，删掉也不报错（空的就什么都不渲染）。
+ * **加图走后台**：在 `/admin` 上传，照片写进后端目录、立即可见，
+ * 不用重新构建（照片是用户内容，不打包进静态产物）。
  */
+import { ref, onMounted } from 'vue'
 import PagePlaceholder from '@/components/PagePlaceholder.vue'
 import banner from '@/assets/backgrounds/gallery/gallery.webp'
 
 /**
  * 我的照片。
  *
- * glob 是**构建期**展开的：加图 / 删图 / 改名都不用动这个文件。
- * 按文件名排序，数字按数值比 —— 所以 `2-xxx` 排在 `10-xxx` 前面，
- * 和文件名给人的直觉一致（普通字典序会把 10 排到 2 前面）。
- * 想指定顺序，就在文件名前面加序号。
+ * **运行时**从后端拉清单（`GET /api/photos`），每张以 `/media/photos/<name>`
+ * 的形式由后端直接发文件。`/api/photos` 返回的 `url` 就是现成地址。
+ *
+ * 这样后台上传 / 排序 / 删除会**立刻反映到网站上**，不用重新构建 ——
+ * 照片是用户内容，不该被打进静态产物（之前打包进 dist，上传了也看不到，
+ * 就是因为构建期就把目录定死了）。顺序由后端按文件名编号排好，
+ * 和后台管理页看到的一致。
+ *
+ * 后端没起：照片墙留空，门面图与正文照常。
  */
-const modules = import.meta.glob<string>('../assets/photos/*.{jpg,jpeg,png,webp,avif}', {
-  eager: true,
-  import: 'default',
-})
-
-const photos = Object.entries(modules)
-  .sort(([a], [b]) => a.localeCompare(b, 'zh-Hans-CN', { numeric: true }))
-  .map(([, src], i) => ({
-    src,
-    alt: `影像 ${ordinal(i)}`,
-  }))
+const photos = ref<{ url: string; alt: string }[]>([])
 
 /** 序号 01 / 02 / 03，和首页、项目页是同一种数法。 */
 function ordinal(index: number): string {
   return String(index + 1).padStart(2, '0')
 }
+
+onMounted(async () => {
+  try {
+    const res = await fetch('/api/photos')
+    if (!res.ok) return
+    const data = (await res.json()) as { photos: { url: string }[] }
+    photos.value = data.photos.map((p, i) => ({
+      url: p.url,
+      alt: `影像 ${ordinal(i)}`,
+    }))
+  } catch {
+    // 后端没起：照片墙留空，不阻塞正文
+  }
+})
 </script>
 
 <template>
@@ -56,10 +67,10 @@ function ordinal(index: number): string {
       <h2 class="sr-only">照片</h2>
 
       <ul class="gallery__grid">
-        <li v-for="photo in photos" :key="photo.src" class="photo">
+        <li v-for="photo in photos" :key="photo.url" class="photo">
           <img
             class="photo__img"
-            :src="photo.src"
+            :src="photo.url"
             :alt="photo.alt"
             loading="lazy"
             decoding="async"

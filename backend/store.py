@@ -1,15 +1,10 @@
 """
-照片库。管的是**影像页真正读的那个目录** —— `frontend/src/assets/photos/`。
+照片库。管的是**影像页真正读的那个目录** —— 部署上是 `/srv/lizao/data/photos`
+（开发期 / 测试可用环境变量 `PHOTOS_DIR` 指到别的目录）。
 
-为什么是这个目录，而不是 `backend/media/`：
-影像页的照片是 `import.meta.glob` 在**构建期**收进去的（见
-`frontend/src/views/GalleryView.vue`），文件名就是顺序。让管理页直接往那个
-目录写文件，前端**一行都不用改**，站点也仍然是纯静态的。
-代价是传完要重启 dev server / 重新 build 才看得到 —— 这件事在管理页上写明了。
-
-⚠️ 这是全站唯一一处「后端往前端源码目录写文件」的地方。它是个**本机工具**，
-不是线上服务：真要上线，照片该挪到 `backend/media/` 由接口发 URL
-（见 `backend/README.md` 的讨论），那时前端得改成运行时拉清单。
+这个目录经 FastAPI 挂到 `/media/photos/`，影像页（`GalleryView.vue`）在运行时
+向 `/api/photos` 拉清单、`/media/photos/...` 取图 —— 后台上传一张、刷新影像页
+就能看到，不用重新打包前端。
 
 顺序怎么定：**编号前缀**。`07-foo.jpg` 里的 `07` 就是它在照片墙上的位置。
 这和前端的排序规则是同一个约定 —— `GalleryView.vue` 用
@@ -45,11 +40,15 @@ OUT_SUFFIX = ".jpg"
 
 # ---------- 目录 ----------
 
-_DEFAULT_DIR = Path(__file__).resolve().parent.parent / "frontend" / "src" / "assets" / "photos"
+# 部署环境照片真正落地的目录：`backend/` 的上一级 `data/photos`，
+# 即服务器上的 `/srv/lizao/data/photos`。这样即使 systemd 漏配 `PHOTOS_DIR`，
+# 默认也会写到正确位置，不会和线上照片库分裂。本地开发 / 测试可用 `PHOTOS_DIR`
+# 指到别处覆盖它。
+_DEFAULT_DIR = Path(__file__).resolve().parent.parent / "data" / "photos"
 
 
 def photos_dir() -> Path:
-    """照片目录。可以用环境变量 PHOTOS_DIR 覆盖（测试时会用）。"""
+    """照片目录。默认是 `/srv/lizao/data/photos`，可用环境变量 PHOTOS_DIR 覆盖。"""
     override = os.environ.get("PHOTOS_DIR")
     return Path(override).expanduser().resolve() if override else _DEFAULT_DIR
 
