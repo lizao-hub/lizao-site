@@ -1,110 +1,585 @@
 <script setup lang="ts">
-import { computed, watchEffect } from 'vue'
+/**
+ * 一个项目的详情页。/projects/<slug>。
+ *
+ * **这一页是极简的：单栏、一个颜色、一条细线。**
+ * - 没有门面图、没有卡片、没有阴影 —— 全页只有字、留白和分隔线，
+ *   **外加极少数「不放就说不清」的实拍**（`video`，到目前全站只有一处）。
+ *   色块偏移是站上的手绘语言，读数的地方用不上。
+ * - **圆角不在此列。** 早先这一页连圆角一起禁了，但禁掉的是「装饰的圆角」
+ *   （卡片、相框），**会按下去的东西不该被连坐** —— 留言区的按钮跟着站上那组
+ *   手绘圆角走，它让「这能点」一眼可读，比一条直角细线管用。
+ * - 只有一个颜色（`--ink-black`，和首页、列表页同一档），层级全靠
+ *   字号 + 透明度分 —— 四档：**正文 .66 · 引言 .64 · 旁白 .56 · 元信息 .55**。
+ *   ⚠️ **下限是 .55（对纸 4.55:1），不要再往下调。** 旁白与元信息这两档
+ *   原本是 .48 / .4（3.67 / 2.83：1），小字号加上抗锯齿之后灰得很；
+ *   它们现在由**字号**拉开（15px / 13px），不靠把墨再调淡。
+ * - 外框走 `.shell`（= --page-w，和其他页、导航同一条左右边界），
+ *   里面的正文再收一道 `max-w-prose`（44em）—— 舒服的阅读行宽不跟着外框变宽。
+ *
+ * 内容顺序：回列表 → 时间/角色 → 标题 → 关键字 → 引言 → 小节 → 结果 → 仓库 → 相邻项目。
+ * 相邻项目是这一页唯一的「往下走」的口子：看完一个项目，下一步多半是看下一个，
+ * 不该逼人先退回列表。
+ *
+ * 一小节（block）由几样可选的东西拼出来：引子、正文、现场画面（`video`）、
+ * 这一节的数字（`stats`）、一串并列的短句（`points`）、一张表（`table`），
+ * 最后是旁白（`aside`）。**它们仍是同一套东西**，不是新装饰：大号数字复用
+ * 页尾「结果」那套排法，表只有几条细线、全表只亮一行（`highlight`），
+ * 短句前面一枚淡短横，视频也只垫一条和表格同族的细线。
+ * 加这几样是因为两个案例页真要讲规模、基准和现场，光靠段落说不清 ——
+ * **能写成一段话的，就别搬出表格来；文字能作证的，就别搬出视频来。**
+ * 这一页还是「读数的地方」，不是面板，更不是作品集。
+ */
+import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import LineIcon from '@/components/LineIcon.vue'
-import SkillTag from '@/components/SkillTag.vue'
+import { RiArrowLeftSLine } from '@remixicon/vue'
+import ProjectGuestbook from '@/components/ProjectGuestbook.vue'
 import { findProject, projectNeighbours } from '@/data/projects'
-import { profile } from '@/data/resume'
 
 const route = useRoute()
 
+/**
+ * 用 computed 而不是取一次：底部的「上一件 / 下一件」会让 slug 变，
+ * 组件不重建。
+ *
+ * 正文是**同步**的 —— 它就在 `data/projects.ts` 里，不依赖任何接口。
+ * 这一页唯一会发请求的是底部的留言区（`ProjectGuestbook`）。
+ */
 const project = computed(() => findProject(String(route.params.slug)))
-const neighbours = computed(() => projectNeighbours(String(route.params.slug)))
 
-watchEffect(() => {
-  document.title = project.value ? `${project.value.name} | ${profile.name}` : `${profile.name}`
-})
+const neighbours = computed(() => projectNeighbours(String(route.params.slug)))
 </script>
 
 <template>
-  <main class="sheet page-top page-bottom">
-    <RouterLink
-      to="/about"
-      class="rule-link inline-flex items-center gap-2 text-[0.78rem] text-ink-soft hover:text-ink"
-    >
-      <LineIcon name="left" :size="12" />
-      关于
-    </RouterLink>
+  <main class="page-bottom">
+    <!--
+      slug 对不上任何项目时什么都不渲染。正常路径不会走到这里 ——
+      路由的 beforeEnter 会把不存在的 slug 退回清单页（见 router/index.ts），
+      这个 v-if 只是兜住「守卫改了但组件没跟上」的那种情况。
+    -->
+    <article v-if="project" class="shell detail">
+      <RouterLink to="/projects" class="detail__back">
+        <RiArrowLeftSLine size="15px" class="inline-block shrink-0 align-[-0.125em]" />
+        做过的东西
+      </RouterLink>
 
-    <template v-if="project">
-      <header class="mt-8">
-        <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-          <p class="font-mono text-[0.75rem] text-ink-soft">{{ project.period }}</p>
-          <p class="font-mono text-[0.75rem] text-accent">{{ project.role }}</p>
-        </div>
-
-        <h1 class="mt-4 text-[1.6rem] leading-[1.5] sm:text-[1.9rem]">{{ project.name }}</h1>
-
-        <p class="mt-5 text-[0.975rem] leading-[1.9] text-ink-soft">{{ project.summary }}</p>
-
-        <ul class="mt-6 flex flex-wrap gap-2">
-          <li v-for="tag in project.tags" :key="tag">
-            <SkillTag :label="tag" />
+      <header class="detail__head">
+        <p class="detail__meta">{{ project.period }} · {{ project.role }}</p>
+        <h1 class="detail__name">{{ project.name }}</h1>
+        <!--
+          关键字：项与项之间是**一条画出来的竖线**，不是 `·`。
+          理由和列表页同一份（见 ProjectsView.vue 的 .project__keywords）——
+          中文的间隔号只该夹在汉字中间，拿来分英文缩写既不合规矩，
+          又和内容里本来就有的 `/`（`PEFT / LoRA`）撞脸。
+        -->
+        <ul class="detail__keywords">
+          <li v-for="keyword in project.keywords" :key="keyword" class="detail__keyword">
+            {{ keyword }}
           </li>
         </ul>
       </header>
 
-      <!-- 做完之后的结果，单独一行，让数字自己说话 -->
-      <section v-if="project.metrics" class="card mt-10 p-6">
-        <ul class="grid gap-6 sm:grid-cols-3">
-          <li v-for="metric in project.metrics" :key="metric.label">
-            <p class="figure text-[1.35rem]">
-              {{ metric.value }}<span v-if="metric.unit" class="text-[0.9rem]">{{ metric.unit }}</span>
-            </p>
-            <p class="mt-2 text-[0.8rem] text-ink-soft">{{ metric.label }}</p>
-          </li>
-        </ul>
-      </section>
+      <!-- 引言：详情页想说得更细就用 lede，没写才退回列表页那句摘要 -->
+      <p class="detail__lede max-w-prose">{{ project.lede ?? project.summary }}</p>
 
-      <section class="mt-12">
-        <h2 class="text-[1.2rem]">做了什么</h2>
-        <div class="dash-rule mt-4" />
-        <ul class="mt-6 space-y-5">
-          <li
-            v-for="item in project.highlights"
-            :key="item"
-            class="flex gap-3 text-[0.95rem] leading-[1.9]"
-          >
-            <LineIcon name="dot" :size="12" class="mt-[0.6rem] text-accent" />
-            <span>{{ item }}</span>
-          </li>
-        </ul>
-      </section>
+      <div class="detail__blocks max-w-prose">
+        <section v-for="(block, i) in project.blocks" :key="i" class="detail__block">
+          <h2 v-if="block.lead" class="detail__lead">{{ block.lead }}</h2>
+          <p class="detail__text">{{ block.text }}</p>
 
-      <div v-if="project.href" class="mt-12">
-        <a :href="project.href" target="_blank" rel="noopener noreferrer" class="btn">
-          {{ project.hrefLabel ?? '代码仓库' }}
-          <LineIcon name="external" :size="13" />
-        </a>
+          <!--
+            现场画面。**全站只有这里会出现媒体**，一页最多一段（类型注释里写着判据）。
+            说明排在图下面 —— 和表的 caption 在上面刻意相反：表先说要读什么，
+            视频先看完再解释在看什么。
+          -->
+          <figure v-if="block.video" class="detail__figure">
+            <video
+              class="detail__video"
+              :src="block.video.src"
+              :poster="block.video.poster"
+              :aria-label="block.video.caption ?? '项目演示视频'"
+              controls
+              muted
+              loop
+              playsinline
+              preload="metadata"
+            />
+            <figcaption v-if="block.video.caption" class="detail__caption detail__caption--below">
+              {{ block.video.caption }}
+            </figcaption>
+          </figure>
+
+          <!-- 这一节自己的数字。用的是和页尾「结果」同一套排法（见 .detail__metrics） -->
+          <dl v-if="block.stats?.length" class="detail__metrics">
+            <div v-for="stat in block.stats" :key="stat.label" class="detail__metric">
+              <dt class="detail__metric-label">{{ stat.label }}</dt>
+              <dd class="detail__metric-value figure">
+                {{ stat.value }}<span v-if="stat.unit" class="detail__metric-unit">{{ stat.unit }}</span>
+              </dd>
+            </div>
+          </dl>
+
+          <!-- 并列的短句：流程、步骤、几件并排的事。一行一条，不打序号 -->
+          <ul v-if="block.points?.length" class="detail__points">
+            <li v-for="(point, j) in block.points" :key="j" class="detail__point">{{ point }}</li>
+          </ul>
+
+          <!-- 表：只有数字必须对齐时才出现。第一列是行名，走 th 让读屏也知道 -->
+          <figure v-if="block.table" class="detail__figure">
+            <figcaption v-if="block.table.caption" class="detail__caption">
+              {{ block.table.caption }}
+            </figcaption>
+            <table class="detail__table">
+              <thead>
+                <tr>
+                  <th v-for="(cell, j) in block.table.head" :key="j" scope="col">{{ cell }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="(row, r) in block.table.rows"
+                  :key="r"
+                  :class="{ 'is-mark': block.table.highlight === r }"
+                >
+                  <!-- 第一列是这一行的名字，走 th / scope=row；其余是数据 -->
+                  <th scope="row" class="detail__rowhead">{{ row[0] }}</th>
+                  <td v-for="(cell, j) in row.slice(1)" :key="j" class="detail__cell">
+                    {{ cell }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </figure>
+
+          <!-- 旁白：比正文小一号、浅一档，缩进一行，一眼看得出不是资料 -->
+          <p v-if="block.aside" class="detail__aside">{{ block.aside }}</p>
+        </section>
       </div>
 
-      <nav class="mt-16 border-t border-line pt-6" aria-label="项目切换">
-        <ul class="flex flex-col gap-4 sm:flex-row sm:justify-between">
-          <li v-if="neighbours.prev">
-            <RouterLink
-              :to="`/projects/${neighbours.prev.slug}`"
-              class="group inline-flex items-center gap-2 text-[0.85rem] text-ink-soft transition-colors duration-200 hover:text-accent"
-            >
-              <LineIcon name="left" :size="12" />
-              更早：{{ neighbours.prev.name }}
-            </RouterLink>
-          </li>
-          <li v-if="neighbours.next" class="sm:text-right">
-            <RouterLink
-              :to="`/projects/${neighbours.next.slug}`"
-              class="group inline-flex items-center gap-2 text-[0.85rem] text-ink-soft transition-colors duration-200 hover:text-accent"
-            >
-              更新：{{ neighbours.next.name }}
-              <LineIcon name="right" :size="12" />
-            </RouterLink>
-          </li>
-        </ul>
-      </nav>
-    </template>
+      <section v-if="project.metrics?.length" class="detail__results max-w-prose">
+        <h2 class="detail__lead">结果</h2>
 
-    <div v-else class="mt-10">
-      <p class="text-ink-soft">找不到这个项目。</p>
-      <RouterLink to="/about" class="btn mt-6">回到关于</RouterLink>
-    </div>
+        <!-- 数字在前、标签在后（dt 在 dd 前面，语义顺序不动，视觉上反过来） -->
+        <dl class="detail__metrics">
+          <div v-for="metric in project.metrics" :key="metric.label" class="detail__metric">
+            <dt class="detail__metric-label">{{ metric.label }}</dt>
+            <dd class="detail__metric-value figure">
+              {{ metric.value }}<span v-if="metric.unit" class="detail__metric-unit">{{ metric.unit }}</span>
+            </dd>
+          </div>
+        </dl>
+
+        <p v-if="project.metricsNote" class="detail__aside">{{ project.metricsNote }}</p>
+      </section>
+
+      <!--
+        这里原来有一个指向仓库的外链（`project.href` + `hrefLabel`）。
+        2026-09-19 删掉：详情页不列链接，读完「结果」就是结尾，不用再给出口。
+        数据里那两个字段留着没删（是真信息，删了要用得重新找），只是没有落点了。
+      -->
+
+      <!--
+        点赞与留言。**排在「相邻项目」之前**：它是这一页内容的结尾，
+        而「下一件」是离开这一页的口子 —— 先读完，再决定去哪儿。
+        宽度跟正文一样收到 max-w-prose：输入框铺满整个外框会太长。
+      -->
+      <ProjectGuestbook v-if="project" :slug="project.slug" class="max-w-prose" />
+
+      <nav class="detail__foot" aria-label="相邻项目">
+        <RouterLink
+          v-if="neighbours.prev"
+          :to="`/projects/${neighbours.prev.slug}`"
+          class="detail__foot-link"
+        >
+          <span class="detail__foot-label">上一件</span>
+          <span class="detail__foot-name">{{ neighbours.prev.name }}</span>
+        </RouterLink>
+        <span v-else />
+
+        <RouterLink
+          v-if="neighbours.next"
+          :to="`/projects/${neighbours.next.slug}`"
+          class="detail__foot-link detail__foot-link--next"
+        >
+          <span class="detail__foot-label">下一件</span>
+          <span class="detail__foot-name">{{ neighbours.next.name }}</span>
+        </RouterLink>
+      </nav>
+    </article>
   </main>
 </template>
+
+<style scoped>
+.detail {
+  padding-top: 3.5rem;
+  /*
+   * 和清单页同一个「粗一点」：描边、按 em、写在外框上一次覆盖全页。
+   * 为什么不用 `font-weight`、0.02em 是怎么量出来的，写在
+   * `ProjectsView.vue` 的 `.projects` 那段注释里（不在这里重抄一遍）。
+   */
+  -webkit-text-stroke: 0.02em currentColor;
+}
+
+/*
+ * 回列表：一枚安静的小字口子，鼠标进来才实。
+ *
+ * 静止态 0.45 → 0.55。0.45 对纸是 3.32:1，而这是**这一页唯一的回头路**；
+ * 它是链接，按 AA 要 4.5:1，0.55 正好压在线上（4.55:1）。
+ * 「安静」仍然成立 —— 悬停照样实到 1，和正文的落差也没变。
+ */
+.detail__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8125rem;
+  letter-spacing: 0.16em;
+  color: var(--ink-black);
+  opacity: 0.55;
+  transition: opacity 200ms linear;
+}
+.detail__back:hover,
+.detail__back:focus-visible {
+  opacity: 1;
+}
+
+.detail__head {
+  margin-top: 3rem;
+}
+
+/*
+ * 元信息（时间 / 角色 / 英文关键字 / 结果标签）。
+ *
+ * 0.4 → 0.55：0.4 对纸只有 2.83:1，13px 的字在那个浓度上就是一片灰雾 ——
+ * 而这里写的是**时间、角色、指标名**，是读的人要拿去用的东西，
+ * 不是装饰。0.55（4.55:1）是这一页的**下限**，比它更淡的一律不合格。
+ * 层级改由字号承担：旁白 15px、元信息 13px，本来就分了大小。
+ */
+.detail__meta {
+  font-size: 0.8125rem;
+  letter-spacing: 0.18em;
+  color: var(--ink-black);
+  opacity: 0.55;
+}
+
+/*
+ * 标题。`font-weight` 不写 —— 霞鹜文楷只有 300 一档（见 .detail 的描边那一行）。
+ * 这一页的层级仍然靠字号和留白，这里只把字号往上抬一档。
+ */
+.detail__name {
+  margin-top: 1rem;
+  font-size: clamp(26px, 2.9vw, 41px);
+  line-height: 1.45;
+  letter-spacing: 0.02em;
+  color: var(--ink-black);
+}
+
+/*
+ * 关键字。这是标题区最浅的一档，但**关键字是内容不是装饰** ——
+ * 原来那 0.5 对纸只有 3.7:1，在 13px 上读着发虚，抬到 0.56（4.7:1）。
+ * 它和 .detail__meta 因此同深了，层级改由**位置**分（一行在标题上、一行在下）。
+ */
+.detail__keywords {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.8em;
+  margin-top: 1.1rem;
+  font-size: 0.8125rem;
+  letter-spacing: 0.16em;
+  color: var(--ink-black);
+  opacity: 0.56;
+}
+
+.detail__keyword {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.8em;
+}
+
+/* 项间那条竖线：比关键字浅小半档（父级 0.56 会再乘一次）。
+   **别调更低** —— 合成到 0.34 就淡得像屏幕上的脏点，等于没画。 */
+.detail__keyword + .detail__keyword::before {
+  content: '';
+  width: 1px;
+  height: 0.8em;
+  background: currentColor;
+  opacity: 0.8;
+}
+
+/* 引言：比正文大一号，比正文浅一档 —— 它是介绍，不是内容 */
+.detail__lede {
+  margin-top: 2.75rem;
+  font-size: 1.125rem;
+  line-height: 2.05;
+  color: var(--ink-black);
+  opacity: 0.64;
+}
+
+.detail__blocks {
+  margin-top: 4.5rem;
+}
+
+.detail__block + .detail__block {
+  margin-top: 2.9rem;
+}
+
+/* 小节标题：走站上统一的标题字体，只是压小、压黑 */
+.detail__lead {
+  font-size: 1.125rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-black);
+}
+
+.detail__text {
+  margin-top: 0.7rem;
+  font-size: 1rem;
+  line-height: 1.95;
+  color: var(--ink-black);
+  opacity: 0.66;
+}
+
+/*
+ * 旁白。左侧一条细线代替引号：像是从正文里让出去的一句话。
+ * 不写斜体 —— 中文没有斜体传统，倾斜只会让字变丑。
+ */
+.detail__aside {
+  margin-top: 0.9rem;
+  padding-left: 1.1rem;
+  border-left: 1px solid var(--line);
+  font-size: 0.9375rem;
+  line-height: 1.9;
+  color: var(--ink-black);
+  /* 0.48 → 0.56（4.7:1）。旁白是**正文的一部分**（只是语气更轻），
+     3.67:1 在 15px 上偏淡；它左边那条线已经说明了「这是旁白」。 */
+  opacity: 0.56;
+}
+
+/*
+ * 短句清单（`points`）：流程、步骤、几件并排的事。
+ * 前面一枚淡短横，比句子本身再浅一档 —— 它只负责起个头，不是内容。
+ * 那道横用 background 画，不写字符：换字体不会让它变成别的样子。
+ */
+.detail__points {
+  margin-top: 1.5rem;
+  list-style: none;
+}
+
+.detail__point {
+  position: relative;
+  padding-left: 1.25rem;
+  font-size: 1rem;
+  line-height: 1.95;
+  color: var(--ink-black);
+  opacity: 0.66;
+}
+
+.detail__point + .detail__point {
+  margin-top: 0.4rem;
+}
+
+.detail__point::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.96em;
+  width: 0.62rem;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.45;
+}
+
+/*
+ * 表（`table`）。**这是这一页唯一会出现竖着一列数字的地方**，所以格外克制：
+ * 没有外框、没有底色、没有圆角，只有表头下面一条实线、每行一条淡痕 ——
+ * 和这一页其它的线是同一族。
+ *
+ * 数字走 tabular-nums：位数对齐才是它值得做成表的唯一理由，对不齐就是白做。
+ * **不设 nowrap** —— 单元格里有长句子（数据划分那种），撑宽了会顶出阅读行宽。
+ */
+.detail__figure {
+  margin: 1.9rem 0 0;
+}
+
+.detail__caption {
+  margin-bottom: 0.9rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.16em;
+  color: var(--ink-black);
+  opacity: 0.38;
+}
+
+/* 视频下面那行说明：字号不变，只是换到图的另一边（上面那条 margin 归零） */
+.detail__caption--below {
+  margin-top: 0.9rem;
+  margin-bottom: 0;
+}
+
+/*
+ * 现场画面。**这是这一页唯一不是字的东西**，所以格外克制：
+ * 零圆角、零投影、不加相框，只有一条和表格同族的细线把它收在纸上。
+ *
+ * aspect-ratio 是**占位**用的：`preload="metadata"` 下尺寸要等元数据回来才知道，
+ * 不留这一行，视频加载完整页会往下跳一次（源片是 1280×720，正好 16:9）。
+ * object-fit: contain 是兜底 —— 将来换成别的比例也只是上下留边，不会裁掉画面。
+ */
+.detail__video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
+  /* 封面还没画上去的那一瞬间铺这一档，比一块黑好看，也和纸是一族 */
+  background: var(--line-soft);
+  border: 1px solid var(--line);
+}
+
+.detail__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  font-variant-numeric: tabular-nums;
+}
+
+.detail__table thead th {
+  padding: 0 0 0.65rem;
+  font-weight: 400;
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-align: right;
+  color: var(--ink-black);
+  opacity: 0.38;
+  border-bottom: 1px solid var(--line);
+}
+
+.detail__rowhead,
+.detail__cell {
+  padding: 0.55rem 0;
+  font-weight: 400;
+  color: var(--ink-black);
+  opacity: 0.6;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.detail__rowhead,
+.detail__table thead th:first-child {
+  padding-right: 1.25rem;
+  text-align: left;
+}
+
+.detail__cell {
+  padding-left: 1rem;
+  text-align: right;
+}
+
+/*
+ * 被点名的那一行（`highlight`）。**全表只有这一行是实的。**
+ * 换颜色是这一页禁止的做法，所以照这一页唯一的语言来：透明度顶到 1，
+ * 底下那条线从淡痕换成看得见的那一档。其余各行一律停在 0.6。
+ */
+.detail__table tr.is-mark .detail__rowhead,
+.detail__table tr.is-mark .detail__cell {
+  opacity: 1;
+  border-bottom-color: var(--line);
+}
+
+/* 结果：上方一条淡线把它和正文分开，是这一页唯一的分节 */
+.detail__results {
+  margin-top: 4.5rem;
+  padding-top: 2.5rem;
+  border-top: 1px solid var(--line-soft);
+}
+
+/*
+ * 数字排成一行行。标签在上（浅、小、字距开），数字在下（大、走 .figure）。
+ *
+ * 列宽下限 11rem 是按**最长的标签**定的：中文标签四个字一行就完，
+ * 英文标签要折行，列太窄就会折成三行、整块看着发毛。
+ * 704px 的正文宽下这是三列 —— 三列刚好每列 200 出头。
+ */
+.detail__metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 2rem 1.5rem;
+  margin-top: 1.75rem;
+}
+
+/*
+ * 数字格。多数项目里标签只有四个字（「系统吞吐」），一行就完；
+ * 但英文标签会折成两三行，而 dd 是跟在 dt 后面的 —— 标签一长，
+ * 同一行里的数字就各站各的高度，一列数看着是歪的。
+ *
+ * 所以格子改成竖排 + `space-between`：标签在上面自己折行，**数字一律贴底**。
+ * 格子本身被 .detail__metrics 拉伸成等高，于是「贴底」就等于「同一行对齐」。
+ * 标签都是一行时（现有的另外两个项目）这条规则不产生任何位移。
+ */
+.detail__metric {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.detail__metric-label {
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
+  color: var(--ink-black);
+  opacity: 0.38;
+}
+
+/* 数字：手写体的数字很好看，站上大号数字一律用它 */
+.detail__metric-value {
+  margin-top: 0.5rem;
+  font-size: clamp(26px, 2.4vw, 37px);
+  line-height: 1.1;
+  color: var(--ink-black);
+}
+
+.detail__metric-unit {
+  margin-left: 0.14em;
+  font-size: 0.46em;
+  letter-spacing: 0.06em;
+  opacity: 0.55;
+}
+
+/*
+ * 相邻项目。看完一个多半想看下一个，所以给它一个不用回列表的口子。
+ * 左边「上一件」、右边「下一件」；第一件没有上一件，用空 span 占住位置，
+ * space-between 才不会把「下一件」甩到左边。
+ */
+.detail__foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-top: 5.5rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--line-soft);
+}
+
+.detail__foot-link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  max-width: 46%;
+  color: var(--ink-black);
+  transition: opacity 200ms linear;
+}
+.detail__foot-link:hover,
+.detail__foot-link:focus-visible {
+  opacity: 0.6;
+}
+
+.detail__foot-link--next {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.detail__foot-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  opacity: 0.35;
+}
+
+.detail__foot-name {
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+</style>

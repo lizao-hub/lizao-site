@@ -1,9 +1,9 @@
 /**
  * 场景素材转换。
  *
- * 把 frontend/1/ 里的原始 PNG 转成 WebP，输出到 src/assets/scenes/。
+ * 把 frontend/1/ 里的原始 PNG 转成 WebP，输出到 src/assets/backgrounds/。
  * 原始图是 2848×1602 的大图，一张 background.png 就有 6~8 MB，
- * 直接进仓库会让 assets 比整个 src 大一个数量级。见 ADR-0009。
+ * 直接进仓库会让 assets 比整个 src 大一个数量级。
  *
  * 用法：npm run build-scenes
  *
@@ -21,7 +21,7 @@ import sharp from 'sharp'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const SRC = join(here, '..', '1')
-const OUT = join(here, '..', 'src', 'assets', 'scenes')
+const OUT = join(here, '..', 'src', 'assets', 'backgrounds')
 
 /** 长边上限。见文件头说明。 */
 const MAX_EDGE = 2400
@@ -35,7 +35,7 @@ const QUALITY = 82
  * - 黑猫.png、日向翔阳动漫海报.png 不转：这两张已经从场景里删掉了。
  */
 const SCENE_INPUTS = {
-  lake: {
+  home: {
     background: 'img/background.png',
     shrub: 'img/远处矮树丛.png',
     willow: 'img/垂柳大树.png',
@@ -111,7 +111,7 @@ function formatSize(bytes) {
 }
 
 async function main() {
-  console.log('转换场景素材到 src/assets/scenes/ …\n')
+  console.log('转换场景素材到 src/assets/backgrounds/ …\n')
   for (const [name, files] of Object.entries(SCENE_INPUTS)) {
     await convertScene(name, files)
   }

@@ -1,4 +1,4 @@
-/** 场景分层的自身动效。都只做极轻微的形变，见 ADR-0005 的动效包线。 */
+/** 场景分层的自身动效。都只做极轻微的形变，不做大幅形变或位移。 */
 export type SceneMotion = 'sway' | 'sway-soft' | 'sway-strong' | 'breathe'
 
 /**
@@ -7,7 +7,7 @@ export type SceneMotion = 'sway' | 'sway-soft' | 'sway-strong' | 'breathe'
  */
 export interface SceneLayer {
   id: string
-  /** 相对 src/assets/scenes/ 的路径，由 scenes 目录的 glob 解析成 URL */
+  /** 相对 src/assets/backgrounds/ 的路径，由 scenes 目录的 glob 解析成 URL */
   src: string
   left: number
   top: number
@@ -35,11 +35,11 @@ export interface SceneHotspot extends SceneLayer {
   /** 目标路由 */
   to: string
   /**
-   * 同组的热点一起响应悬停 / 聚焦。
-   * 目前没有场景用到（三叠书不再是同一个组件），保留字段是为了以后
-   * 真出现「一组东西共用一个去向」时不用改组件。
+   * 曾经还有一个 `group?: string`（同组热点一起响应悬停 / 聚焦）——
+   * 三叠书不再是同一个组件之后就没数据用它，SceneStage 里那套 is-group-active
+   * 也早拆了，于是这个字段成了「写着但没有任何代码读」的死字段，已删。
+   * 将来真出现「一组东西共用一个去向」时再加回来，那时它才会有实现跟上。
    */
-  group?: string
   alt?: string
   zones?: SceneZone[]
 }

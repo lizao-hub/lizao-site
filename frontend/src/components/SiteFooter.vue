@@ -1,14 +1,21 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
-import LineIcon from '@/components/LineIcon.vue'
-import { profile } from '@/data/resume'
+import { RiExternalLinkLine } from '@remixicon/vue'
+import { profile } from '@/data/profile'
 
 /**
- * 页脚。只在内容页出现（场景页没有页脚，见 ADR-0009）。
+ * 页脚。**全站未挂载**（待重新制作），所以它不参与 `npm run build` 的产物，
+ * 但 `vue-tsc` 仍然会检查它 —— 改了图标或数据文件记得同步这里，否则
+ * `npm run type-check` 会先在这里红。
  *
  * 「屋里」放在这里而不是主导航：屋里是一个场景，不是一篇能读的页面，
- * 但它得有个地方能进去 —— 否则一个从搜索引擎直接落到 /notes 的人
+ * 但它得有个地方能进去 —— 否则一个从搜索引擎直接落进内容页的人
  * 永远看不到站点最有意思的那一页。
+ *
+ * ⚠️ 这个文件是 2026-09-19 傍晚照 git 里的版本补回来的：原文件被一次误删带走，
+ * 回收站与编辑器历史里都没有。当时顺手修了三处：图标改走 @remixicon/vue、
+ * 身份信息改从 `@/data/profile` 取（`data/resume.ts` 早就不在了）、
+ * 删掉引用 `docs/adr/` 的那句（那个目录已不在仓库里）。
  */
 </script>
 
@@ -32,7 +39,7 @@ import { profile } from '@/data/resume'
           class="inline-flex items-center gap-2 text-[0.78rem] text-ink-soft transition-colors duration-200 hover:text-accent"
         >
           {{ profile.githubLabel }}
-          <LineIcon name="external" :size="12" />
+          <RiExternalLinkLine size="12px" class="inline-block shrink-0 align-[-0.125em]" />
         </a>
       </div>
     </div>

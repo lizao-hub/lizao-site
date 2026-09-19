@@ -5,85 +5,285 @@
 /* ==========================================================================
    设计令牌
 
-   定位：李泽敖的个人主页（不是简历站）。
-   基调：新中式治愈系，取自《罗小黑战记》的视觉特征。
-   词汇与决策见根目录 CONTEXT.md 与 docs/adr/。
+   定位：李泽敖的个人主页 —— **不是简历站，不是作品集，不是面板，也不是博客。**
+
+   主题：**手绘 × 自然 × 插画 × 私人生活感。**
+
+   一句话：一个年轻人的私人小世界，被画成了一组网页空间。
+   它是「一间屋子和它窗外的湖」，不是「一个用来展示成果的容器」。
+
+   视觉关键词（改任何一处样式之前先读一遍）：
+     手绘 · 自然 · 插画 · 阳光 · 纸张 · 木质 · 空气感 · 留白 ·
+     私人生活 · 日常物件 · 克制 · 安静 · 人的痕迹
 
    三条最容易改坏的规则：
-   1. 底色不纯白。米白 / 暖灰，模拟纸张。
-   2. 立体感靠色块偏移与手绘排线，不用模糊投影。
-   3. 暗色是同一个世界的夜晚（暖调墨夜），不是把变量反相。
+   1. 底色不纯白。带一点点冷调的米白，像纸 —— 纸上要有人的痕迹，
+      所以它允许脏、允许被手画过。**冷暖不再是规则。** 2026-09-18 曾把
+      残留的暖色（字、纸片、强调色、木、苔、过场遮罩）整族转到冷半边，
+      并立下「令牌里只有冷色、暖色只活在插画里」；**这条已于 2026-09-19 废止。**
+      现有令牌的值一个没动（它们本来就合适），但往后加颜色只看它跟纸、
+      跟景合不合，**不必再先问冷暖**，也别拿旧注释里那句「暖色禁止入内」当依据。
+   2. 立体感靠色块偏移与手绘排线，**不用模糊投影**。纸是平的。
+   3. 只有光明一套。暗色模式已整块删除，不要再往回加第二套令牌。
+
+   设计约定散在下面各处注释与 frontend/README.md 里（「设计令牌」「几个容易
+   踩的坑」两节）。曾经有一份根目录 CONTEXT.md 和 docs/adr/ 编号文档，
+   已废弃删除 —— 别再往那两个地方写。
    ========================================================================== */
 
 @layer base {
   /* ------------------------------------------------------------------
-     光明：宣纸
+     纸。只有这一套，没有暗色分支。
      ------------------------------------------------------------------ */
   :root {
-    /* 纸与面。底色带一点暖，拒绝 #fff。 */
-    --paper: #f6f3ec;
-    --surface: #fdfbf6;
-    --surface-sunk: #efeae0;
+    /*
+      纸（--paper）：**全站唯一的页面底色。**
 
-    /* 墨色：带暖灰的黑，不是纯黑。 */
-    --ink: #33302b;
-    --ink-soft: #6f6862;
-    --ink-faint: #a39a91;
+      它要像一张纸，不像一块屏幕 —— 带一点点冷调的米白，
+      允许被手画过、被水洇过（见下面 .grain 的噪点）。
 
-    /* 线条：宣纸上的淡墨。 */
-    --line: #ddd5c7;
-    --line-soft: #e9e3d7;
+      曾经站点纸偏暖（#f6f3ec）、湖边的景纸偏冷（#f6f9f7），于是从湖边
+      切到项目页 / 影像页 / 项目详情时，整页会「暖一下」，边界看得见。
+      现在统一到湖边这一档：`html`、`body`、导航条、舞台（.stage-wrap）
+      全是它，切页时底色不动。**全站底色只有这一个出口。**
 
-    /* 自然色：低饱和，取自森林、水、木。 */
-    --moss: #7d8f6a;
+      改这个值要同步 `index.html` 里首屏那两处写死的色值
+      （它跑在 CSS 加载之前，不改会先闪一下旧色）。
+    */
+    --paper: #f6f9f7;
+
+    /*
+      面（--surface）：贴在同一张纸上的一张「纸片」——
+      比 --paper 亮一档，用来让一块东西从纸底上浮起来。
+
+      当前只有预留的手绘零件用到它（.card / .tag / .btn，都没有落点，
+      见文件末尾那段说明）。页面底色与正文一律用 --paper，
+      **不要再引入第三个近白色。**
+
+      冷暖与 --paper 同向（R 最低、G 最高）。注意「亮一档」的幅度
+      **不得不缩小**：旧纸偏暗（相对亮度 0.898），纸片能往上走 0.068；
+      现在纸本身已是 0.940，到纯白只剩 0.060 的余地，这一档因此只剩
+      0.026。天花板是 --photo-frame 的纯白，那仍是全站最白的东西。
+    */
+    --surface: #f9fcfa;
+
+    /*
+      照片的白相纸边。比 --paper / --surface 更白一档 ——
+      白边要从纸底上「浮」出一层，和纸同色就糊在一起了。
+      只给影像页那些正方形照片用（见 GalleryView.vue），
+      不是「第二个底色」，别拿它去当卡片背景。
+    */
+    --photo-frame: #ffffff;
+
+    /*
+      写在纸上的字：带一点冷灰的黑，不是纯黑。
+
+      色相与 --paper 同向（R 最低、G 最高、B 居中），饱和度只给 5~10% ——
+      暗色的色相距离本来就很短，再高就不是「冷灰的黑」而是「绿字」了。
+      亮度逐档与改前对齐（对纸 12.40 / 5.21 / 2.62 : 1），翻的只是冷暖。
+    */
+    --ink: #2e3130;
+    --ink-soft: #646a67;
+    --ink-faint: #919e98;
+
+    /*
+      纯黑。**只给「压在景上」和「整块排版」这两个语境用。**
+
+      首页那三行字压在亮水彩的天空上，灰墨在那里发灰，黑字才立得住；
+      项目页（清单与详情）要求「和首页一样的黑字」，于是也吃这一档 ——
+      那两页整页是排版，同一套黑下去，只用字号和透明度分层级，
+      不加第二个颜色。
+
+      它**不是**全站正文色：纸面上的正文仍然是 --ink。
+    */
+    --ink-black: #000;
+
+    /*
+      线条：**纸上的淡痕**，像铅笔起稿留下的那一道，不是尺子画出来的。
+      两档：需要看得见（分节线、旁白左边那条）用 --line，
+      只想起个分隔作用（清单项之间、结果上方）用 --line-soft。
+
+      冷暖：跟 --paper 同一个方向 —— 往绿偏一点（G 最高、R 最低），
+      只是把纸身上那点几乎看不见的色偏放大到看得见。曾经它们是暖纸
+      那一族的 #ddd5c7 / #e9e3d7（R 最高、B 最低）：底色转冷之后，
+      这两条线成了画面上仅剩的还在发暖的东西，跟纸对不上。
+      **亮度没动**：--line 的相对亮度 0.671 → 0.672、对纸的对比度
+      1.374 → 1.372 : 1（--line-soft 同此，0.772 → 0.770），
+      两档之间的间距也没变（1.140 → 1.135 : 1）。换的只是冷暖方向。
+    */
+    --line: #d0d8d3;
+    --line-soft: #dee5e1;
+
+    /*
+      自然色：低饱和，取自森林、水、木。色相依次排开、互不重叠 ——
+      苔 124° / 风化的木 148° / 水 198°，强调色 161° 正夹在后两个之间。
+      （三个当前都在冷半边，但那是这几个值选出来的**结果**，不是规则 ——
+      见文件头第 1 条：冷暖限制已废止。）
+
+      --moss 是**最后一个转冷的令牌**：它原本是 #7d8f6a（黄绿 89°，
+      而且是全站唯一一条 B 最低的颜色 —— 暖色的指纹）。字、纸片、强调色、
+      木都转冷之后，只剩它还站在暖半边。当时换值走的规矩是**只翻冷暖、
+      不动亮度**：相对亮度 0.2505 → 0.2504、对纸 3.30 → 3.30 : 1。
+      色相挪到 124°（刚过 120° 这条冷暖界线的最近位置，既保住「苔」的
+      偏黄绿语义，又不跟 --wood 挤在一起）。与 --wood 的感知距离因此
+      **反而拉大了**（OKLab ΔE 0.043 → 0.053），与 --water 也从 0.086
+      到 0.089。
+      --wood 转冷后是**风化的木 / 灰木**（漂在岸上的那种），
+      不再是新锯开的木头色。
+    */
+    --moss: #6a936d;
     --water: #7a9aa8;
-    --wood: #a8876a;
+    --wood: #809188;
 
-    /* 点亮色：极少用。像灯笼或灵力光点。 */
-    --accent: #c9704a;
-    --accent-ink: #fdfbf6;
-    --accent-soft: #f0d9cd;
+    /*
+      点亮色：**极少用**。整站能见到它的地方只有几处 —— 键盘焦点圈、
+      正文里那条虚线下划线与悬停变色的链接、以及 ::selection 的底色。
 
-    /* 看照片的遮罩。两种模式下都是深的。 */
-    --veil: #2a2620;
-    --veil-ink: #f0ece3;
+      它原是那点暖（#c9704a 的陶土橘，注释里写成「被太阳照到的那一点暖」）。
+      全站转冷之后它是**被水洇到的那一处青** —— 湖水的深处、树荫下的暗面。
+      **不是「品牌主色」**：不要拿它去铺大面积，也不要为了配色再另找一个
+      颜色来跟它配。整站只有一个强调色。
+
+      色相 160.6°，比 --paper（140°）偏青一点，色相上排在 --moss（苔 124°）
+      与 --wood（风化的木 148°）之后、--water（水 198°）之前，四个色相
+      互不重叠；饱和度从 54% 压到 14.7%（站点本来就是低饱和的）。
+
+      **亮度 0.170，对纸 4.50 : 1。** 它原先是 0.245（3.36 : 1）——
+      那是从暖翻冷时留下的「与改前分毫不差」，只当装饰看是够的。
+      但这一档同时要当**正文链接**（`PagePlaceholder` 的「回屋里」）
+      与**导航悬停色**用，3.36 在小字号上不达 AA；压在它上面的
+      --accent-ink 也只有 3.45 : 1。压到 4.50 一次修三处：
+      链接 4.50、按钮上的浅字 4.62、描边 3.28（旧 2.45）。
+
+      色相与饱和度只挪了不到 1（161.1°→160.6°、13.9%→14.7%），
+      仍旧是「被水洇到的那一处青」，只是深了一档 —— 别只看色板，
+      4.5:1 对应的透明度是 0.55，这个是同一件事的颜色版。
+    */
+    --accent: #5a796f;
+    /* 压在点缀色上的文字。对 #5a796f 是 4.62 : 1（accent 压暗之后才达标的） */
+    --accent-ink: #f9fcfa;
+    /* 点缀色自身那一档浅底：::selection 的背景、按钮的色块偏移 */
+    --accent-soft: #c8e4da;
 
     --z-nav: 40;
-    --z-lightbox: 50;
+
+    /* 导航条的高度。舞台尺寸、SiteNav 的高度都用它 */
+    --nav-h: 4rem;
+
+    /*
+      主图尺寸（= 舞台尺寸）。参考画布 2848×1602（场景原稿的尺寸），
+      按 min(视口宽, 视口高 × 比例) 铺满 —— 超宽屏上不会长成一面墙。
+
+      **全站只有一档，按「让开导航条」算**（视口高减 --nav-h）。
+      四个视图的主图因此是同一条宽度：
+      湖边的景、屋里的景、项目页与影像页的门面图，全是它。
+      导航的宽度也用它，所以导航两端正好落在主图的两端上。
+
+      **高度不再是令牌**（曾有一条 --stage-h）：它由 2848:1602 与宽度
+      一对一换算（.stage 用 aspect-ratio 从「收窄后的宽度」算），
+      宽度收窄时高度跟着收。写成一条独立的 min(视口高−导航, 视口宽×比例)
+      看着更直白，实则和宽度各算各的 —— 一旦宽度被 100% 收窄，
+      高度还停在原地，画面就被压扁了。一个尺度只留一个出口。
+
+      **还有一条靠 html 的 scrollbar-gutter 兜住**：这个 100vw 是含
+      滚动条的宽度。会滚动的页里它被 min(100%, …) 收进可用宽度，不滚动的页
+      （湖边、屋里）没有滚动条、可用宽度就是视口宽 —— 两边差 15~17px，
+      切页时导航与主图会横着跳一下。详见 html 的 scrollbar-gutter。
+
+      代价是刻意的，不是疏漏：**湖边不再铺满整个视口**，
+      上下会留出一点纸边（约 --nav-h 的一半），像一幅裱在纸上的画。
+      这是「四张图同宽」的必然结果 —— 屋里那幅景受导航条占位所限，
+      宽度最大只能到这里；湖边要跟它一样，就得放弃满屏。
+
+      （曾经分两档：整屏的给湖边，让开导航条的另一档给屋里与 /projects。
+        两档宽度不等，切页时图会跳一下宽度，故合并掉。
+        将来真要做满屏出血的景，再把「整屏」那一档加回来。）
+    */
+    --stage-w: min(100vw, calc((100vh - var(--nav-h)) * 2848 / 1602));
+
+    /*
+      舞台宽的 1%。**景里的字号一律用它，不用 vw。**
+
+      为什么：舞台宽是 min(视口宽, 视口高×比例)，vw 只认宽。
+      窗口又宽又矮时（比如 1600×700）舞台由「高」定，只有 1131px 宽，
+      而 3.4vw 还在按 1600 算 —— 同一块字在景里的占比会从 48% 涨到 66%，
+      直接压到书桌和笔记本上。按舞台算，字就跟着那幅景一起缩。
+
+      它和 vw **在「宽度是约束」时数值完全相同**（那时 --stage-w 就是 100vw），
+      所以正常窗口下换成它，两页的渲染一字不变；只有又宽又矮的窗口才由它兜住。
+    */
+    --scene-u: calc(var(--stage-w) / 100);
+
+    /*
+      统一页面宽度（page width）。
+      等于主图宽度（--stage-w）—— 主图与主导航两端落点的那条线。
+      普通内容页的外层容器都吃它，于是 **导航、主图、正文在任意屏幕尺寸下
+      都落在同一条左右边界上**。这是全站唯一的「页面布局宽度」标准 ——
+      改这里一处，所有页一起动。
+    */
+    --page-w: var(--stage-w);
+
+    /*
+      字体。
+
+      **拉丁字体只在这条 --font-latin 里出现一次。** 下面三套字体栈都从它
+      拼出来，换拉丁字体只改这一行，不必去翻三个文件对字。
+
+      Wotfard 是拉丁字体：444 个字形，只覆盖 ASCII / 拉丁扩展与常用标点，
+      **没有汉字**。所以它排在每个栈的最前面，后面接中文回退 ——
+      浏览器缺字时逐字往后找，于是同一行里拉丁走 Wotfard、汉字走中文字体，
+      不需要 unicode-range（那是给「同一字体的分片」用的，这里不是）。
+
+      代价：中文标点（，。「」）在 Wotfard 里也没有，同样落到中文字体 ——
+      这正是想要的，全角标点本来就该跟着汉字走。
+    */
+    --font-latin: 'Wotfard';
+
+    /* 正文与界面：拉丁 Wotfard，汉字系统黑体（不下载中文 webfont）。 */
+    --font-sans:
+      var(--font-latin), -apple-system, BlinkMacSystemFont, 'PingFang SC',
+      'Microsoft YaHei', 'Noto Sans SC', 'Source Han Sans SC', 'Segoe UI',
+      'Roboto', sans-serif;
+
+    /* 标题：拉丁 Wotfard，汉字霞鹜文楷 Light（自托管子集，见 assets/fonts）。 */
+    --font-display:
+      var(--font-latin), 'LXGW WenKai', 'LXGW WenKai Light', 'PingFang SC',
+      'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+
+    /* 场景页（湖边 / 屋里）景里的字：汉字走宋，拉丁仍走 Wotfard。 */
+    --font-scene: var(--font-latin), 'Noto Serif SC', 'Songti SC', 'SimSun', serif;
+
+    /*
+      （曾经还有一条 --font-mono：'JetBrains Mono'，预留给代码 / 日期 / 标签。
+        它一个引用都没有 —— 站上没有任何元素穿 font-mono，却为它装了一个 npm 包、
+        在 main.ts 里引了两条 @font-face。零落点还带运行时代价的预留不是预留，
+        是负担，已连同 Tailwind 的 fontFamily.mono 映射一起删。） */
+
+    /*
+      场景（湖边 / 屋里）自己的一小组颜色。
+
+      这两个页面是**水彩插画**，景里的字不落在纸上，而是落在一幅画里 ——
+      所以它们不用 --ink 那套纸面墨色，改用景自己的墨。
+      **它们只服务于 SceneStage 与两个场景页，别的页面不要引用。**
+
+      注意这里**没有「场景纸」**：舞台底下铺的就是全站唯一的页面底色
+      --paper，不再另有一档（曾经有个 --scene-paper 别名，已删 ——
+      全站底色只有一个出口，多一个名字只会让人以为它不一样）。
+    */
+    /* 场景过场遮罩（.veil-scene）用的纸色：进景 / 出景那 500ms 盖住整屏。
+       它盖的是「景」不是纸，所以跟 --paper 同色也看得见 —— 直接取
+       --surface，不再另造一个近白。
+       （曾经叫 --scene-paper-warm，值是暖米色 #fdf8ee。全站转冷后
+       「warm」这个名字已经不成立，一并改掉了。） */
+    --scene-fade: var(--surface);
+    /* 半透明纸色，压在景上（= --surface 的 92%）。曾给场景提示胶囊 .hint 当底色，
+       现各场景自管提示，此令牌保留待用 */
+    --scene-paper-veil: rgba(249, 252, 250, 0.92);
+    /* 景里的正文色 */
+    --scene-ink: #3d4a43;
+    --scene-ink-soft: #7a8a80;
 
     color-scheme: light;
-  }
-
-  /* ------------------------------------------------------------------
-     暗色：墨夜
-     同一个世界的夜晚。底色是暖调的深褐墨绿，不是中性冷灰；
-     自然色保留色相只降饱和，让绿还是绿、蓝还是蓝。
-     ------------------------------------------------------------------ */
-  .dark {
-    --paper: #1f1d19;
-    --surface: #2a2723;
-    --surface-sunk: #191713;
-
-    --ink: #ece7dd;
-    --ink-soft: #a89f93;
-    --ink-faint: #7a7368;
-
-    --line: #3d3833;
-    --line-soft: #322e29;
-
-    --moss: #8ba077;
-    --water: #88a8b6;
-    --wood: #bd9b7c;
-
-    /* 夜里灯火偏暖 */
-    --accent: #e08a63;
-    --accent-ink: #1f1d19;
-    --accent-soft: #4a3428;
-
-    --veil: #14120f;
-    --veil-ink: #ece7dd;
-
-    color-scheme: dark;
   }
 
   html {
@@ -91,7 +291,33 @@
     background-color: var(--paper);
     /* 滚动时背景的云与落叶不跟着抖 */
     scroll-behavior: smooth;
+
+    /*
+      永远给纵向滚动条留一条位置 —— **不滚动的时候也留**。
+
+      这是「四个视图的主图同宽」能不能成立的前提。滚动条会吃掉
+      15~17px 的可用宽度（Windows Chrome/Firefox 是占位型，不是浮层型），
+      于是：不滚动的页（湖边、屋里）可用宽度 = 视口宽，
+      会滚动的页（项目、影像、项目详情）可用宽度 = 视口宽 − 滚动条。
+      两份宽度差 15px —— 界面上就是切页时导航条与主图横着跳一下。
+
+      实测（视口 929×917，滚动条 15px）：
+        修前  /room 导航 929px，/projects、/gallery 都是 914px；
+        修后  三页一律 914px，与 .plate 的主图同边。
+
+      stable 而不是 overflow-y: scroll：只占位、不画滚动条。
+      屋里与湖边是整页的景，永远挂一条灰槽会很难看；
+      stable 在不需要滚动的页上只是一条空白，没有槽也没有滑块。
+    */
+    scrollbar-gutter: stable;
   }
+
+  /*
+    这里曾经有一条 `html:has([data-scene])`，让场景页的根元素单独铺一层
+    比站点纸冷的「场景纸」—— 因为「为滚动条留出的那一条」落在 .stage-wrap
+    （fixed 铺满视口）的内容盒之外，画的是根元素底色。
+    两种纸并成同一个颜色之后它就没有意义了，已删（见文件末尾的删除记录）。
+  */
 
   body {
     @apply bg-paper font-sans text-ink antialiased;
@@ -134,28 +360,53 @@
 }
 
 @layer components {
-  /* 导航、页脚这类通栏内容的宽度 */
+  /*
+    统一页面容器。**全站只有这一个外框宽度。**
+
+    宽度走 --page-w（= 主图宽度 = 导航两端那档）。用 min(100%, …) 收住纵向
+    滚动条：内容页有滚动条时 100vw 会比可视宽度宽出一条，导致横向滚动；
+    100% 是文档流里的可用宽度（不含滚动条），所以不会溢出。
+    margin-inline:auto 居中 —— 于是所有页面的左右边界、与导航的两端对齐，
+    在任意屏幕尺寸下都保持一致。
+
+    改 --page-w 一处，所有页一起动。
+
+    正文要更窄用 max-w-prose（44em）在里面再收一道，
+    **不要再另开一个外框宽度** —— 外框一多，导航和内容的左右边界就不齐了。
+    （曾经还有一个同宽的 `.sheet`，已删：两个名字一条规则，迟早有人只改一个。）
+  */
   .shell {
-    @apply mx-auto w-full max-w-[68rem] px-5 sm:px-8;
+    margin-inline: auto;
+    width: min(100%, var(--page-w));
+    padding-inline: 2rem;
   }
 
-  /* 正文栏。所有长文本都落在这一条里，保证每页阅读宽度一致。 */
-  .sheet {
-    @apply mx-auto w-full max-w-[46rem] px-5 sm:px-8;
+  /*
+    图片版面（plate）。
+
+    宽度 = **--page-w 本身** —— 不带 .shell 的正文内边距。
+    .shell 的 2rem 是留给正文行宽的边，图不该吃它：图像版面要顶到
+    「页面布局宽度」的两端上，才和两个场景的主图（同为 --page-w）一样宽。
+    所以门面图、影像页的照片墙用 .plate，正文用 .shell，两者居中对齐、
+    图比字左右各宽出一档（这是排版里正常的「图出血、字留边」，不是错位）。
+  */
+  .plate {
+    margin-inline: auto;
+    width: min(100%, var(--page-w));
   }
 
   /* 页面主区统一的上边距与下边距。疏朗一点。 */
   .page-top {
-    @apply pt-16 sm:pt-24;
+    @apply pt-24;
   }
   .page-bottom {
-    @apply pb-28 sm:pb-36;
+    @apply pb-36;
   }
 
   /* ------------------------------------------------------------------
      纸感
      极淡的噪点，消除数字化的冰冷感。用内联 SVG feTurbulence 生成，
-     不引图片、不跑滤镜（见 ADR-0003）。
+     不引图片、不跑滤镜。
 
      opacity 必须很低（0.035 上下）。再高就不像纸，像屏幕脏了。
      ------------------------------------------------------------------ */
@@ -171,76 +422,174 @@
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
     z-index: 0;
   }
-  /* 暗色下噪点要更淡，否则像信号噪点 */
-  .dark .grain::before {
-    opacity: 0.022;
-  }
 
   /* ------------------------------------------------------------------
      场景
-     湖边与屋内的两种水彩景。布景本身是固定色的图，但**纸张底色、
-     文字、标签**都走变量，所以场景能跟着明暗两套走。
-     变量值取自原稿（1/index.html 与 1/room.html）的 :root，
-     不另发明颜色。见 ADR-0008。
+
+     湖边与屋里，两种水彩景，都由 SceneStage.vue 渲染。布景本身是固定色的
+     图；景里的字、提示胶囊、过场遮罩走上面 :root 里那一小组 --scene-*
+     变量 —— 它们和 --ink / --paper 那套纸面色**是两套**，不要混用。
+
+     这一节只放「页面级」的东西：场景页根元素的字体，和两个场景页共用的
+     过场遮罩、压在景上的文案块。舞台尺寸、图层、热点都在 SceneStage.vue。
      ------------------------------------------------------------------ */
-  :root {
-    /* 湖边：偏冷的白，天空的颜色透出来 */
-    --scene-paper: #f6f9f7;
-    /* 屋内：偏暖的米纸 */
-    --scene-paper-warm: #fdf8ee;
-    /* 场景里的木色点缀，和 --wood 是同一路，但原稿更深一点 */
-    --scene-wood: #b8703f;
-    /* 提示胶囊的底：半透明纸色，压在景上 */
-    --scene-paper-veil: rgba(253, 248, 238, 0.92);
-    /* 场景里的正文色 */
-    --scene-ink: #3d4a43;
-    --scene-ink-soft: #7a8a80;
-  }
-
-  /* 夜里：景不变，纸变墨，标签改成深底浅字 */
-  .dark {
-    --scene-paper: #14171a;
-    --scene-paper-warm: #1a1714;
-    --scene-wood: #d59a6b;
-    --scene-paper-veil: rgba(26, 23, 20, 0.9);
-    --scene-ink: #dfe4e0;
-    --scene-ink-soft: #9aa79f;
-  }
 
   /*
-   * 导航压在场景上（屋里页）。
-   * 不能有实心底和边框 —— 那会在插画的天空上切一道横条。
-   * 但也不能全透明：场景是浅色纸调，导航文字是 --ink-soft，
-   * 压在浅色天空上读不清。所以给它一层极淡的纸色渐变，
-   * 上深下透，像景的顶部自然变亮一点。
-   */
-  /*
-   * 压在页面背景上的导航（除湖边外的每一页）。
+   * 导航条（除湖边外的每一页都有）。
    *
-   * 无底色、无边框：导航文字是白色加粗带阴影，靠 text-shadow 保证可读，
-   * 不靠背景块。只留一层极淡的**暗色**渐变压住顶部 ——
-   * 用暗色而不是纸色：纸色（--scene-paper-veil 是 93% 不透明的米白）
-   * 会在白字后面铺出一块亮底，白字直接消失。
+   * **不吃鼠标**：整条 header 只负责好看，只有链接本身接事件（见 SiteNav）。
+   * 它是 sticky 的 64px 通栏 —— 项目清单 / 影像这类会滚动的页，内容从它
+   * 底下经过，不这么设就会吃掉那 64px 的点击。
    *
-   * 这层渐变很浅，在米白纸底上几乎看不见，在插画上能压住天空的细节。
+   * **自带纸底**：正因为内容会从它底下经过，这一条必须不透明 ——
+   * 透明底会让正文和导航文字叠在同一行上（实测 /projects 滚到 905px 时，
+   * 某一项的关键字行落在 y=11、摘要行落在 y=41，而导航条占 0~64）。
+   * 底色就是全站唯一的页面底色 `--paper`，每一页都相同 ——
+   * 屋里的舞台曾经铺另一种冷一点的纸，导航得跟着换色
+   * （`.nav-bar--scene-paper`）；两种纸并成一个颜色后那条规则已删。
+   *
+   * 代价：这一条会盖住纸感噪点（`.grain`，z-0），那 64px 因此比别处平。
+   * 噪点只有 0.035 的不透明度，肉眼看不出来；真要它，就得把噪点挪到
+   * 导航之上，那又轮到文字吃噪点，不值。
    */
-  .nav--over-scene {
-    background: linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, 0.18) 0%,
-      rgba(0, 0, 0, 0.06) 60%,
-      transparent 100%
-    );
-    border-bottom: 0;
+  .nav-bar {
+    pointer-events: none;
+    background: var(--paper);
   }
 
   /* ------------------------------------------------------------------
-     场景页
-     两个场景页都是 100vh 不滚动的舞台，所以正文的内边距在这里清掉。
+     场景页：压在景上的那一块字
+
+     湖边与屋里共用**同一套字号阶梯** —— 同样的 clamp 上下限与舞台系数
+     （括号里那个数 × --scene-u，就是舞台宽的百分之几）、
+     同样的字距、行高、颜色与对中方式。两页只有「放在哪儿」不同：
+     湖边贴在天空上，屋里落在房间的中轴上。
+
+     所以只在这里写一份，两页各自覆盖 left / top 与位移方向
+     （见 HomeView.vue 与 RoomView.vue 里那几行）。
+     **别把这段抄回组件里** —— 曾经就是两页各抄一份：字号改一处漏一处，
+     连 @keyframes 都同名打架（两页都叫 intro-in，收尾的 transform 不一样）。
+
+     name / meta / murmur 三档是湖边用的；屋里另外多用两档
+     （label 分节标签、item 条目，见下面那段），同样只写在这里。
      ------------------------------------------------------------------ */
   .scene-page {
-    font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', serif;
+    /*
+      景里那几行字：汉字走宋，拉丁走 Wotfard（见 :root 的 --font-scene）。
+      这条会盖掉 body 的 --font-sans —— 屋里和湖边的字全部继承它，
+      所以首页那句「LIzao 的自留地」的拉丁也在这里定下来。
+    */
+    font-family: var(--font-scene);
     color: var(--scene-ink);
+  }
+
+  /*
+    文案块。位移用两个变量表达，因为两页摆法不同：
+
+    - 湖边：贴天空，`--intro-shift-y: 50%`（往下挪半个文字块高）
+    - 屋里：落在舞台中轴上，`--intro-shift-x: -50%`
+
+    用变量而不是各写一套 transform + @keyframes：入场动画要沿着同一个位移
+    收尾，两处必须永远一致。于是变量一处定义、动画一处引用。
+  */
+  .intro {
+    position: absolute;
+    transform: translateX(var(--intro-shift-x, 0))
+      translateY(var(--intro-shift-y, 0));
+    text-align: center;
+    /*
+      景是亮的（亮的天空、亮的窗），**黑字最清楚**。
+      走 --ink-black，不是纸面上的 --ink —— 这一块字跟随景，不跟随主题。
+    */
+    color: var(--ink-black);
+    line-height: 1.9;
+    /* 文案不抢鼠标：过场由页面的点击代理统一拦（见两页的 onStageClick） */
+    pointer-events: none;
+    animation: intro-in 1.2s ease both;
+  }
+
+  .intro__name {
+    font-size: clamp(26px, calc(3.4 * var(--scene-u)), 54px);
+    font-weight: 500;
+    letter-spacing: 0.04em;
+  }
+
+  .intro__meta {
+    margin-top: 0.4em;
+    font-size: clamp(11px, calc(1.15 * var(--scene-u)), 18px);
+    letter-spacing: 0.16em;
+  }
+
+  .intro__murmur {
+    margin-top: 0.5em;
+    font-size: clamp(11px, calc(1.1 * var(--scene-u)), 17px);
+    letter-spacing: 0.22em;
+  }
+
+  /*
+    分节标签与条目：屋里那三段简历（教育经历 / 竞赛获奖 / 其他）用，湖边不用。
+
+    标签是**小标题**，不是内容 —— 比条目再轻一档，字距开到 0.3em 认得出是标题；
+    靠透明度分层而不是换颜色（和 .links 同一套：景是亮的，颜色越多越脏）。
+    条目走「比标题小、比碎念大」那一档，和 .intro__meta 同一个量级。
+  */
+  /*
+    分节标签：字号小一档、字距开到 0.3em，**不加透明度**。
+
+    层级靠字号与字距，和湖边的 name / meta / murmur 完全一样（那三档
+    也是一律 --ink-black，只有大小与字距不同）。曾经给这里压过 0.6 的
+    opacity 想让它「再轻一点」，实测只有 2.33 : 1 —— 木墙是被阳光照到的
+    那一块（底色 L≈0.20），全黑的小字压在上面也才 4.93 : 1，
+    再乘一个 0.6 就等于把这个标签作废了。别再加回去。
+  */
+  .intro__label {
+    margin-top: 1em;
+    font-size: clamp(10px, calc(0.9 * var(--scene-u)), 14px);
+    letter-spacing: 0.3em;
+  }
+
+  .intro__item {
+    margin-top: 0.25em;
+    font-size: clamp(11px, calc(1.15 * var(--scene-u)), 18px);
+    letter-spacing: 0.1em;
+  }
+
+  /*
+    行高收一档（.intro 的 1.9 是给湖边那四行短句的）。
+    屋里这一块有八九行，1.9 会把整块撑出墙面上干净的那一块地方。
+  */
+  .intro__label,
+  .intro__item {
+    line-height: 1.6;
+  }
+
+  /* 条目里那个中点（学校 · 时间 / 赛事 · 奖项）。比正文更淡，只起断句作用。 */
+  .intro__dot {
+    margin: 0 0.55em;
+    opacity: 0.4;
+  }
+
+  /* 空行不留空隙：留空某一行（比如不想要那句碎念）不会撑出多余的间距 */
+  .intro__name:empty,
+  .intro__meta:empty,
+  .intro__murmur:empty,
+  .intro__label:empty,
+  .intro__item:empty {
+    display: none;
+  }
+
+  /* 淡入 + 轻轻落下 8px。落点就是上面那个位移，所以两页共用一条。 */
+  @keyframes intro-in {
+    from {
+      opacity: 0;
+      transform: translateX(var(--intro-shift-x, 0))
+        translateY(calc(var(--intro-shift-y, 0) - 8px));
+    }
+    to {
+      opacity: 1;
+      transform: translateX(var(--intro-shift-x, 0))
+        translateY(var(--intro-shift-y, 0));
+    }
   }
 
   /* 场景页自己的过场：整幅淡出 + 纸色遮罩，比路由的交叉淡入更贴题 */
@@ -248,7 +597,7 @@
     position: fixed;
     inset: 0;
     z-index: 60;
-    background: var(--scene-paper-warm);
+    background: var(--scene-fade);
     opacity: 0;
     pointer-events: none;
     transition: opacity 500ms ease;
@@ -257,32 +606,36 @@
     opacity: 1;
   }
 
-  /* ------------------------------------------------------------------
-     手绘线条
-     笔触感来自这个滤镜：极轻微的位移，让边框不是数学上的直线。
-     只用于静态装饰元素，不挂在大量节点上（见 ADR-0003）。
-     ------------------------------------------------------------------ */
-  .sketchy {
-    filter: url(#rough-edge);
-  }
+  /* ==================================================================
+     手绘零件库：按钮 / 标签 / 徽标 / 卡片
 
-  /* 分隔线：一段断续的手绘短划，不是实线 */
-  .dash-rule {
-    height: 1px;
-    border: 0;
-    background-image: linear-gradient(
-      to right,
-      var(--line) 0 10px,
-      transparent 10px 18px
-    );
-    background-size: 18px 100%;
-    background-repeat: repeat-x;
-  }
+     ⚠️ **当前一个都没有落点。** 站上五个路由里：导航是纯文字链接、
+     照片不可点（没有灯箱）、页脚未挂载；项目页只用到了**手绘圆角**这一半
+     （留言区的「写上去」按钮自己抄了下面那组数值），底色与色块偏移没跟，
+     所以零件本体仍然一件都没穿上。
 
-  /* ------------------------------------------------------------------
-     按钮：手绘圆角 + 色块偏移。
-     按下时往右下压，像纸被按下去。
-     ------------------------------------------------------------------ */
+     清点过才留的，理由两条：
+     1. 「手绘圆角 + 色块偏移」是这套视觉语言的一部分（README 的「已实现」
+        里就写着它），那几组 border-radius 的魔法值就是这条语言本身。
+     2. 它是**唯一**会把 --surface 与 --accent-ink 用起来的地方。
+
+     **留着不占体积。** Tailwind 只把 `.vue` / `.ts` / `.md` 里出现过的类名打进产物，
+     没穿过的规则会被整条删掉 —— 上面这几条现在就不在 CSS 产物里
+     （`.btn` / `.badge` / `.card` 都是，实测过）。
+     哪天有元素真的穿上它们，才会被重新打进去。所以「预留」是没有代价的，
+     但**也别因为它不要钱就往页面上搬**。
+
+     唯一的例外是 `.tag`：它会跟着进产物。Tailwind 是按字符串命中判定的，
+     而源码里到处都有「tag」这个子串（`target="_blank"`、注释里的 tagline……），
+     于是那条规则被误判成「用到了」。几百字节，不值得为它改名，知道就行 ——
+     **也别在注释里写出那几个预留类名**（写一次就等于把它们请进产物，
+     预留类进产物就是这么误触发的）。
+
+     用之前先想清楚一件事：这个站是「一间屋子和它窗外的湖」，不是面板。
+     **能用一句话和一个留白解决的地方，不要搬出卡片。**
+     ================================================================== */
+
+  /* 按钮：手绘圆角 + 色块偏移。按下时往右下压，像纸被按下去。 */
   .btn {
     @apply inline-flex items-center gap-2 bg-surface px-4 py-2 text-[0.875rem] text-ink;
     border: 1.5px solid var(--ink);
@@ -339,104 +692,21 @@
     color: var(--accent);
   }
 
-  /* 导航左侧的字标：手写体，不要边框盒子，让它像写在纸上 */
-  .wordmark {
-    @apply font-display text-[1.05rem] leading-none text-ink;
-    font-weight: 300;
-    letter-spacing: 0.02em;
-  }
-
-  /* 大号数字：手写体的数字很好看，直接用 */
-  .figure {
-    @apply font-display text-ink;
-    font-weight: 300;
-    letter-spacing: 0;
-  }
-
-  /* ------------------------------------------------------------------
-     照片：手绘相框 + 色块偏移。轻微倾斜，像随手贴在纸上。
-     ------------------------------------------------------------------ */
-  .photo {
-    @apply block w-full text-left;
-  }
-  .photo__frame {
-    @apply block w-full overflow-hidden bg-surface;
-    border: 1.5px solid var(--line);
-    border-radius: 10px 7px 12px 8px / 8px 12px 7px 11px;
-    box-shadow: 3px 3px 0 var(--line-soft);
-    transition:
-      transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1),
-      box-shadow 300ms cubic-bezier(0.34, 1.56, 0.64, 1),
-      border-color 300ms linear;
-  }
-  .photo:hover .photo__frame,
-  .photo:focus-visible .photo__frame {
-    border-color: var(--moss);
-    box-shadow: 4px 4px 0 var(--accent-soft);
-    /* 飘起来一点 */
-    transform: translate(-2px, -3px) rotate(-0.6deg);
-  }
-  .photo__img {
-    @apply block h-full w-full object-cover;
-    transition: filter 300ms linear;
-  }
-  .photo:hover .photo__img {
-    filter: saturate(1.06);
-  }
-  .photo__caption {
-    @apply mt-3 block text-[0.78rem] leading-relaxed text-ink-soft;
-  }
-
-  /* 首页与关于页的个人照片：固定比例，避免布局跳动 */
-  .portrait-frame {
-    @apply block w-full overflow-hidden bg-surface;
-    border: 1.5px solid var(--ink);
-    border-radius: 12px 9px 14px 10px / 10px 14px 9px 12px;
-    box-shadow: 4px 4px 0 var(--accent-soft);
-  }
-  .portrait-frame img {
-    @apply block h-full w-full object-cover;
-  }
-
-  /* ------------------------------------------------------------------
-     笔记封面：卡片的一半。图片和占位块共用同一个相框，
-     有没有封面都不会跳动。
-     ------------------------------------------------------------------ */
-  .note-cover {
-    @apply block w-full overflow-hidden bg-surface;
-    border: 1.5px solid var(--line);
-    border-radius: 10px 7px 12px 8px / 8px 12px 7px 11px;
-    box-shadow: 2px 2px 0 var(--line-soft);
-    aspect-ratio: 16 / 10;
-    transition:
-      border-color 300ms linear,
-      box-shadow 300ms linear;
-  }
-  .note-cover__img {
-    @apply block h-full w-full object-cover;
-    transition: filter 300ms linear;
-  }
-  /* 没有封面：一片淡色留白 + 一行小字，和影像页的空相框一个语气 */
-  .note-cover__blank {
-    @apply flex h-full w-full flex-col items-center justify-center gap-2 text-ink-faint;
-  }
-  /* 整张卡片 hover 时封面才响应，不用给封面单独一个交互态 */
-  .note-card:hover .note-cover {
-    border-color: var(--moss);
-    box-shadow: 3px 3px 0 var(--accent-soft);
-  }
-  .note-card:hover .note-cover__img {
-    filter: saturate(1.06);
-  }
-
-  /* ------------------------------------------------------------------
-     卡片：软边框 + 一点点偏移，像贴在纸上的一张纸片。
-     ------------------------------------------------------------------ */
+  /* 卡片：软边框 + 一点点偏移，像贴在纸上的一张纸片。 */
   .card {
     @apply bg-surface;
     border: 1.5px solid var(--line);
     border-radius: 12px 9px 14px 10px / 10px 14px 9px 12px;
     box-shadow: 2px 2px 0 var(--line-soft);
+  }
+
+  /* ================== 手绘零件库到此为止 ================== */
+
+  /* 大号数字：手写体的数字很好看，直接用（项目清单的序号、详情页的指标） */
+  .figure {
+    @apply font-display text-ink;
+    font-weight: 300;
+    letter-spacing: 0;
   }
 
   /* 单行链接的下划线：像用笔划出来的，从左往右长出来 */
@@ -460,133 +730,26 @@
 
 
   /* ------------------------------------------------------------------
-     滚动淡入：由 SectionFade.vue 用 IntersectionObserver 触发一次。
-     只有 opacity 与很小的位移，见 ADR-0005。
-     ------------------------------------------------------------------ */
-  .reveal {
-    opacity: 0;
-    transform: translateY(16px);
-    transition:
-      opacity 700ms cubic-bezier(0.22, 0.61, 0.36, 1),
-      transform 700ms cubic-bezier(0.22, 0.61, 0.36, 1);
-  }
-  .reveal.is-in {
-    opacity: 1;
-    transform: none;
-  }
+     这里曾经有过的东西，都已随各自的功能一起删掉。
+     想捡回来就去 git 历史里找（`git log -S <类名>`），别再凭记忆重写：
 
-  /* 看照片的遮罩 */
-  .veil {
-    background-color: var(--veil);
-    color: var(--veil-ink);
-  }
-
-  /* ------------------------------------------------------------------
-     Markdown 正文
-     代码块不做语法高亮：这套配色里不需要多一种颜色。
+     - `.veil` + `--veil` / `--veil-ink` / `--z-lightbox`
+       —— 看照片的遮罩，随 PhotoLightbox.vue 一起删（影像页现在没有灯箱）。
+     - `.dash-rule` —— 断续手绘分隔线。零引用。要分隔线就用
+       `border-top: 1px solid var(--line-soft)`，几个页面都是这么做的。
+     - `.sheet` —— `.shell` 的同宽别名。两个名字一条规则，迟早有人只改一个。
+     - `.wordmark` —— 导航左侧的字标，随「站名字标」一起删（见 SiteNav.vue）。
+     - `--scene-paper` —— 场景纸的别名。全站底色并成一个颜色之后它是多余的
+       一层间接，直接用 `--paper`。
+     - `--scene-wood` / `--surface-sunk` —— 零引用。
+     - `--font-mono` —— 等宽（JetBrains Mono）。全站没有一个元素穿 `font-mono`，
+       却带着一个 npm 包与两条 @font-face。已连同依赖一起删（见 main.ts）。
+     - `.prose-note` —— Markdown 正文样式，随 /notes 一起废除
+       （渲染器 utils/markdown.ts 也拿掉了）。
+     - `.reveal` / `.reveal.is-in` —— 滚动淡入，随 SectionFade.vue 一起删：
+       那个组件从写出来就没挂载过（页面都很短，一屏见底），
+       而它是唯一会用这两个类的入口。哪天真需要分段露出，先写组件再写样式。
      ------------------------------------------------------------------ */
-  .prose-note {
-    font-size: 1.0625rem;
-    line-height: 1.95;
-  }
-  .prose-note > * + * {
-    margin-top: 1.6em;
-  }
-  .prose-note h2 {
-    margin-top: 2.6em;
-    font-size: 1.3rem;
-    font-weight: 300;
-    line-height: 1.7;
-  }
-  .prose-note h3 {
-    margin-top: 2.2em;
-    font-size: 1.1rem;
-    font-weight: 300;
-    line-height: 1.7;
-  }
-  .prose-note ul,
-  .prose-note ol {
-    padding-left: 1.35em;
-  }
-  .prose-note ul {
-    list-style: square;
-  }
-  .prose-note ol {
-    list-style: decimal;
-  }
-  .prose-note li + li {
-    margin-top: 0.5em;
-  }
-  .prose-note li::marker {
-    color: var(--moss);
-  }
-  .prose-note a {
-    color: var(--accent);
-    text-decoration: underline;
-    text-decoration-thickness: 1.5px;
-    text-underline-offset: 4px;
-  }
-  .prose-note strong {
-    font-weight: 600;
-  }
-  .prose-note blockquote {
-    padding-left: 1.2rem;
-    border-left: 2px solid var(--moss);
-    color: var(--ink-soft);
-  }
-  .prose-note code {
-    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 0.875em;
-    background: var(--surface-sunk);
-    border: 1px solid var(--line);
-    border-radius: 5px;
-    padding: 0.12em 0.36em;
-  }
-  .prose-note pre {
-    background: var(--surface-sunk);
-    border: 1.5px solid var(--line);
-    border-radius: 10px 7px 12px 8px / 8px 12px 7px 11px;
-    padding: 1.15rem 1.25rem;
-    overflow-x: auto;
-    font-size: 0.875rem;
-    line-height: 1.8;
-  }
-  .prose-note pre code {
-    background: none;
-    border: 0;
-    padding: 0;
-    font-size: inherit;
-  }
-  .prose-note hr {
-    height: 1px;
-    margin: 3em 0;
-    border: 0;
-    background-image: linear-gradient(
-      to right,
-      var(--line) 0 10px,
-      transparent 10px 18px
-    );
-    background-size: 18px 100%;
-  }
-  .prose-note img {
-    width: 100%;
-    border: 1.5px solid var(--line);
-    border-radius: 10px 7px 12px 8px / 8px 12px 7px 11px;
-  }
-  .prose-note table {
-    width: 100%;
-    font-size: 0.9375rem;
-  }
-  .prose-note th,
-  .prose-note td {
-    padding: 0.5em 0.75em 0.5em 0;
-    text-align: left;
-    vertical-align: top;
-  }
-  .prose-note th {
-    border-bottom: 1.5px solid var(--line);
-    font-weight: 600;
-  }
 }
 
 /* ==========================================================================

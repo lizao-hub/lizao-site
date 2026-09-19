@@ -1,186 +1,99 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+/**
+ * 固定导航。左边「首页」回 `/`，右边三个去向：关于我 / 项目 / 影像。
+ *
+ * ⚠️ 这个文件是 2026-09-19 傍晚**按构建产物重建**的：原文件被一次误删带走，
+ * 没进回收站（git rm / rm 是直接 unlink），VS Code 本地历史里只剩 9 月 14 日的
+ * 旧版（那版还带着早已删掉的 PixelIcon 与 ThemeToggle，不能用）。
+ * 依据是当天 16:08 的 `dist/assets/index-CLVRkYAK.js` 与 `index-ByAWI7oe.css`——
+ * 类名、props、路由判断都原样留着，**注释留不住**，所以这里的注释是重建时补的。
+ *
+ * **不做窄屏适配**（全站约定）：没有汉堡菜单，也不做折叠。
+ * 三个去向是写死的数组，不是从路由表里推的 —— 导航该是「选出来的几条路」，
+ * 而不是「所有路由的目录」。
+ */
 import { RouterLink, useRoute } from 'vue-router'
-import LineIcon from '@/components/LineIcon.vue'
 
-const route = useRoute()
-const open = ref(false)
-
-/**
- * 主导航。
- *
- * 现在的形态：**透明**，白字加粗带阴影，压在页面背景上。
- * 屋里那幅插画衬底时这样最好看；其余内容页目前是米白纸底，
- * 白字在纸底上并不清楚 —— **这是已知的、待处理的状态**：
- * 内容页的背景后续会改（用户已确认），改完白字就站得住了。
- *
- * 曾经有过的东西，都已按要求删掉：
- * - 站名字标（Wordmark）
- * - 明暗主题切换按钮（ThemeToggle）
- * - GitHub 外链（桌面版与手机菜单两处）
- */
-
-/**
- * 导航链接。只放**能从屋里走到、且真的能读**的页面。
- *
- * 湖边（`/`）不在里面：它是场景，整页没有导航（见 ADR-0009）。
- */
-const links = [
-  { label: '首页', to: '/' },
+const LINKS = [
+  { label: '关于我', to: '/room' },
   { label: '项目', to: '/projects' },
-  { label: '笔记', to: '/notes' },
   { label: '影像', to: '/gallery' },
 ]
 
-function isActive(to: string): boolean {
-  if (to === '/') return route.path === '/'
+const route = useRoute()
+
+/**
+ * 当前页判定要带上**子路径**：停在 `/projects/xxx` 时 `/projects` 也该是高亮的，
+ * 否则从详情页往上看会发现自己「不在任何一栏里」。
+ * `startsWith(to + '/')` 那个尾部斜杠是必须的 —— 不带的话 `/projectsxx`
+ * 也会被当成 `/projects` 的子路径。
+ */
+function isCurrent(to: string): boolean {
   return route.path === to || route.path.startsWith(`${to}/`)
 }
-
-function onKeydown(event: KeyboardEvent) {
-  if (event.key === 'Escape') open.value = false
-}
-
-watch(() => route.fullPath, () => {
-  open.value = false
-})
-
-onMounted(() => window.addEventListener('keydown', onKeydown))
-onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
 <template>
-  <!--
-    整条导航透明：无底色、无边框、无毛玻璃，只有一层极淡的纸色渐变压在顶部。
-    渐变是为了压住插画最上沿的细节，让文字有个干净的落点；
-    它是「从纸色到全透」的，所以不构成一条实心横条。
-  -->
-  <header class="nav--over-scene sticky top-0" :style="{ zIndex: 'var(--z-nav)' }">
-    <!--
-      宽度：单独给导航用更宽的一条（90rem / 1440px），
-      不动全站共用的 .shell（68rem）—— 那个决定了长文的阅读宽度。
-    -->
-    <nav
-      aria-label="主导航"
-      class="nav-wide flex h-16 items-center justify-end gap-4"
-    >
-      <ul class="hidden items-center gap-8 md:flex">
-        <li v-for="link in links" :key="link.to" class="relative">
-          <RouterLink
-            :to="link.to"
-            class="nav-link"
-            :class="isActive(link.to) && 'is-current'"
-          >
+  <header class="nav-bar sticky top-0" :style="{ zIndex: 'var(--z-nav)' }">
+    <nav aria-label="主导航" class="nav-wide flex items-center justify-between gap-4">
+      <RouterLink to="/" class="nav-home">首页</RouterLink>
+
+      <ul class="nav-links flex items-center gap-8">
+        <li v-for="link in LINKS" :key="link.to" class="relative">
+          <RouterLink :to="link.to" class="nav-link" :class="{ 'is-current': isCurrent(link.to) }">
             {{ link.label }}
           </RouterLink>
+          <!-- 当前页底下那道短线。absolute 定位在 li 上，不占行高 -->
           <span
-            v-if="isActive(link.to)"
+            v-if="isCurrent(link.to)"
             class="absolute -bottom-1 left-0 h-[2px] w-full bg-current"
             aria-hidden="true"
           />
         </li>
       </ul>
-
-      <button
-        type="button"
-        class="nav-menu-btn flex md:hidden"
-        :aria-label="open ? '关闭菜单' : '打开菜单'"
-        :aria-expanded="open"
-        aria-controls="mobile-nav"
-        @click="open = !open"
-      >
-        <LineIcon :name="open ? 'close' : 'menu'" :size="14" />
-      </button>
     </nav>
-
-    <div v-if="open" id="mobile-nav" class="nav--over-scene absolute inset-x-0 top-16 md:hidden">
-      <ul class="nav-wide flex flex-col pb-2">
-        <li v-for="link in links" :key="link.to">
-          <RouterLink
-            :to="link.to"
-            class="nav-link block py-3.5"
-            :class="isActive(link.to) && 'is-current'"
-          >
-            {{ link.label }}
-          </RouterLink>
-        </li>
-      </ul>
-    </div>
   </header>
 </template>
 
 <style scoped>
-/*
- * 导航文字：白色、加粗、带阴影。
- *
- * 阴影不是装饰 —— 它让白字能落在深浅不一的插画上。
- * 用两层：一层紧贴字形的暗影保证轮廓，一层大范围的柔光让字浮起来。
- * （ADR-0002 禁止的是「模糊投影做立体感」，这里是为了可读性的文字阴影，
- *   不是同一回事。）
- *
- * 悬停与当前项：换成 accent 的浅色 + 下划线，不用降低不透明度 ——
- * 白字降透明度之后在浅背景上会直接失踪。
- */
-.nav-link {
+.nav-wide {
+  /* 和舞台同宽（--stage-w），这是全站「一条线」的规矩 */
+  width: min(100%, var(--stage-w));
+  height: var(--nav-h);
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 3vw, 2.5rem);
+}
+
+.nav-link,
+.nav-home {
   font-size: 0.9375rem;
   font-weight: 700;
   letter-spacing: 0.06em;
-  color: #fff;
-  text-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.55),
-    0 2px 14px rgba(0, 0, 0, 0.35);
+  color: var(--ink);
   transition: color 200ms linear;
 }
 
 .nav-link:hover,
-.nav-link:focus-visible {
-  color: var(--accent-soft);
-}
-
-/* 当前项：白字 + 下划线，保持和悬停同一套颜色逻辑 */
-.nav-link.is-current {
-  color: #fff;
-}
-
-/*
- * 手机菜单按钮。
- *
- * ⚠️ 这里**不要写 display**。
- * 模板上是 `class="nav-menu-btn md:hidden"`，靠 Tailwind 的 md:hidden 控制显隐：
- * .md\:hidden 与 .nav-menu-btn[data-v-xxx] 权重相同（都是 0,1,0），
- * 而 scoped 样式在产物里排在 Tailwind 之后 —— 这里一旦写 display:flex，
- * 它就会在每个宽度下都赢掉 md:hidden，按钮在桌面上也一直显出来。
- * 居中用 align/justify，尺寸用 width/height，显隐交给 Tailwind。
- */
-.nav-menu-btn {
-  align-items: center;
-  justify-content: center;
-  height: 2.25rem;
-  width: 2.25rem;
-  border: 1.5px solid rgba(255, 255, 255, 0.85);
-  border-radius: 10px 7px 11px 8px / 8px 11px 7px 10px;
-  color: #fff;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
-}
-
-/* 但 align/justify 只在 display:flex 下生效，所以窄屏（按钮该出现时）
-   还得用 Tailwind 的 flex。模板上是 `flex md:hidden`。 */
-
-/* 键盘焦点：白描边在浅背景上很弱，用 accent 更醒目 */
-.nav-menu-btn:focus-visible {
-  border-color: var(--accent);
+.nav-link:focus-visible,
+.nav-home:hover,
+.nav-home:focus-visible {
   color: var(--accent);
 }
 
-/*
- * 导航的横向宽度。
- * 比全站的 .shell（68rem）宽，让两端更靠近屏幕边缘。
- * 用 padding 而不是 max-w + mx-auto，这样宽屏上不会出现两条空白。
- */
-.nav-wide {
-  margin-inline: auto;
-  width: 100%;
-  max-width: 90rem;
-  padding-inline: clamp(1rem, 3vw, 2.5rem);
+/* 当前页反过来要**最不显眼**：它已经是答案了，再用强调色就是在喊 */
+.nav-link.is-current {
+  color: var(--ink);
+}
+
+.nav-links,
+.nav-home {
+  /* 导航是浮在景上的一层，默认不吃鼠标 —— 只有文字部分接 */
+  pointer-events: auto;
+}
+
+.nav-home {
+  display: flex;
+  align-items: center;
+  height: 100%;
 }
 </style>

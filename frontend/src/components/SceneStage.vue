@@ -1,48 +1,47 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { RouterLink } from 'vue-router'
-import type { Scene, SceneHotspot, SceneLayer } from '@/types/scene'
-
 /**
- * 场景舞台。两个场景（湖边 / 屋内）共用这一个组件，差别全在 scenes.ts 的数据里。
+ * 把一份场景数据渲染成**可点的景**。两个场景页（湖边 / 屋里）共用这一个组件。
  *
- * 三条来自原稿的、踩过坑才得到的规则：
+ * ⚠️ 这个文件是 2026-09-19 傍晚**按构建产物重建**的：原文件被一次误删带走，
+ * 没进回收站（git rm / rm 是直接 unlink），VS Code 本地历史里也没有。
+ * 依据是当天 16:08 的 `dist/assets/index-CLVRkYAK.js`（逻辑与模板）
+ * 与 `index-ByAWI7oe.css`（样式与 @keyframes）。类名、props、事件名都原样留着，
+ * **注释留不住** —— 这里的注释是重建时按产物里能看出的行为补的。
  *
- * 1. **舞台维持 2848:1602 的比例**，用 min(100vw, 100vh * 比例) 铺满视口。
- *    层全部按参考画布的百分比定位，所以任何视口下相对位置都不变。
- * 2. **物件的可点区域是独立的透明小块，不是物件本身。**
- *    原稿试过用 clip-path 抠出轮廓来限制点击，实测 elementFromPoint 完全
- *    无视 clip-path，电脑的透明处会把压在它下面的书抢走。所以：
- *    .art 只负责好看（pointer-events: none），.zone 负责接鼠标。
- * 3. **容器必须有在流内的子元素撑高。** 如果 .hot 的子元素全部绝对定位，
- *    它的高度就是 0，zone 的 top/bottom 百分比会全部解析成 0，点击区消失。
- *    所以 .art 是 position: relative 的。
+ * ## 它只做三件事
  *
- * 动效包线见 ADR-0005：只做物件自身的呼吸 / 摇曳，悬停只缩放，
- * 不跟鼠标做视差，不加光晕和投影。
+ * 1. **按数组顺序叠图层**。`layers` 的先后就是远近：数组前面的在远处。
+ *    所以**别**给某一层写 z-index —— 那会让「顺序即叠放」失效。
+ * 2. **把坐标换算成百分比**。所有 left/top/width 都是相对 2848×1602
+ *    参考画布的百分比（不是相对视口），舞台自己维持这个比例，层跟着缩放。
+ * 3. **在热点上放可点区域**。热点是 `.hot`，里面有一枚铺满的 `RouterLink`
+ *    和若干个 `.zone` —— 可点的是 zone，不是整个方框。
+ *
+ * ## 祖先不得有 transform / filter / perspective
+ *
+ * `.stage-wrap` 是 `position: fixed`。任何非 none 的 transform 都会让祖先
+ * 变成 fixed 后代的包含块，于是 `inset: 0` 按那个祖先的高度解析 —— 而场景页的
+ * `main` 自身高度是 0，舞台会被整个推出屏幕。**这是踩过的坑，别再踩。**
+ *
+ * ## 动效
+ *
+ * 场景自身不做入场动画；各场景页只吃 App.vue 那次全站页面淡入。
+ * 层的摇动幅度都是零点几度，靠 `transform-origin` 和时长区分远近感。
  */
+import { computed } from 'vue'
+import { RouterLink } from 'vue-router'
+import type { Scene, SceneHotspot, SceneLayer, SceneZone } from '@/types/scene'
 
 const props = withDefaults(
   defineProps<{
+    /** 图层、热点、可点区域、坐标 —— 见 data/scenes.ts */
     scene: Scene
-    /** 顶部提示文案。不传就不显示 */
-    hint?: string
+    /** 屋里要用：舞台整体往下让出导航条的高度 */
+    navClearance?: boolean
   }>(),
-  { hint: undefined },
+  { navClearance: false },
 )
 
-const emit = defineEmits<{ interact: [] }>()
-
-/** 第一次碰到任意物件之后提示变淡，之后不再打扰 */
-const quiet = ref(false)
-
-function onEnter() {
-  if (quiet.value) return
-  quiet.value = true
-  emit('interact')
-}
-
-/** 按 id 找热点。图层在渲染时要决定「它是布景还是热点」，查这一次。 */
 const hotspotIndex = computed(() => {
   const map = new Map<string, SceneHotspot>()
   for (const spot of props.scene.hotspots) map.set(spot.id, spot)
@@ -54,12 +53,10 @@ function hotspotOf(id: string): SceneHotspot | undefined {
 }
 
 /**
- * 实际要画的层，按绘制顺序。
+ * 绘制顺序 = layers 原样 + **没写进 layers 的热点**追在后面。
  *
- * layers 里的每一层原样保留（顺序就是叠放顺序）；
- * 不在 layers 里的热点追在后面 —— 两个场景的写法不一样：
- * 湖景的小屋只写在 hotspots 里，屋内那几个物件两边都写了。
- * 这里补齐一下，免得一个场景因为少写一行就安静少掉一个热点。
+ * 两个场景的写法不一样：湖景的小屋只写在 hotspots 里，屋内那几个物件两边都写了。
+ * 这条兜底保证「只登记成热点」的层不会被漏画。
  */
 const drawList = computed<SceneLayer[]>(() => {
   const ids = new Set(props.scene.layers.map((layer) => layer.id))
@@ -67,25 +64,11 @@ const drawList = computed<SceneLayer[]>(() => {
   return [...props.scene.layers, ...extras]
 })
 
-/*
- * 悬停：只缩放，CSS 的 :hover / :focus-within 就够了。
- * 曾经有一个「组」的概念（三叠书一起缩放），靠一个 activeGroups
- * 状态把 is-group-active 挂到整组上。现在只有一叠书可点，
- * 那个机制连同类型里的 group 字段一起拿掉了。
- *
- * 悬停标签（鼠标移到物件上弹出来的文字）也已整个拿掉。
- * label 字段现在只用于 aria-label，不再渲染成可见的 .tag。
- */
-
 function layerStyle(layer: SceneLayer) {
-  return {
-    left: `${layer.left}%`,
-    top: `${layer.top}%`,
-    width: `${layer.width}%`,
-  }
+  return { left: `${layer.left}%`, top: `${layer.top}%`, width: `${layer.width}%` }
 }
 
-function zoneStyle(zone: { left: number; top: number; right: number; bottom: number }) {
+function zoneStyle(zone: SceneZone) {
   return {
     left: `${zone.left}%`,
     top: `${zone.top}%`,
@@ -96,61 +79,43 @@ function zoneStyle(zone: { left: number; top: number; right: number; bottom: num
 </script>
 
 <template>
-  <div class="stage-wrap">
-    <div class="stage" :data-scene="scene.id">      <!--
-        一层一层画，**顺序就是 scene.layers 的顺序**：数组前面的在远处。
-
-        这里刻意不做「先画布景、再画热点」两轮回圈。之前就是那么写的，
-        结果是 layers 的先后完全失效 —— 所有**装饰图层都会被压在所有热点下面**，
-        数据里把马克杯排在书后面也没用（马克杯要浮在书前）。
-        两轮的代价是一个看不见的 z-order bug，不值。
-
-        热点和普通图层的区别只在「接不接鼠标」：
-        热点多一层 .hot 包裹（内含 .zone 可点块和悬停标签）。
-      -->
+  <div class="stage-wrap" :class="navClearance && 'stage-wrap--nav-clearance'">
+    <div class="stage" :data-scene="scene.id">
       <template v-for="layer in drawList" :key="`layer-${layer.id}`">
-        <!-- 普通布景层：不接鼠标，只有自身极轻的呼吸 / 摇曳 -->
+        <!-- 热点：可点的区域（zones）压在画上面 -->
+        <div
+          v-if="hotspotOf(layer.id)"
+          class="hot"
+          :style="layerStyle(layer)"
+        >
+          <RouterLink
+            class="hot__link"
+            :to="hotspotOf(layer.id)!.to"
+            :aria-label="hotspotOf(layer.id)!.label"
+          >
+            <span
+              v-for="(zone, i) in hotspotOf(layer.id)!.zones"
+              :key="`zone-${layer.id}-${i}`"
+              class="zone"
+              :style="zoneStyle(zone)"
+            />
+          </RouterLink>
+
+          <span class="art" :class="layer.motion && `motion-${layer.motion}`">
+            <img :src="layer.src" :alt="hotspotOf(layer.id)!.alt ?? ''" />
+          </span>
+        </div>
+
+        <!-- 装饰层：只是画，不接鼠标 -->
         <span
-          v-if="!hotspotOf(layer.id)"
+          v-else
           class="art-layer"
           :class="layer.motion && `motion-${layer.motion}`"
           :style="layerStyle(layer)"
         >
           <img :src="layer.src" alt="" aria-hidden="true" />
         </span>
-
-        <!-- 热点：物件本体 + 压在它上面的透明可点块 -->
-        <div
-          v-else
-          class="hot"
-          :style="layerStyle(layer)"
-          @pointerenter="onEnter"
-        >
-          <RouterLink
-            class="hot__link"
-            :to="hotspotOf(layer.id)!.to"
-            :aria-label="hotspotOf(layer.id)!.label"
-            @focus="onEnter"
-          >
-            <template
-              v-for="(zone, i) in hotspotOf(layer.id)!.zones"
-              :key="`zone-${layer.id}-${i}`"
-            >
-              <span class="zone" :style="zoneStyle(zone)" />
-            </template>
-          </RouterLink>
-
-          <span class="art" :class="layer.motion && `motion-${layer.motion}`">
-            <img :src="layer.src" :alt="hotspotOf(layer.id)!.alt ?? ''" />
-          </span>
-
-          <!-- 悬停标签已按要求整个拿掉，不再有鼠标移到物件上弹出的文字。 -->
-        </div>
       </template>
-
-      <p v-if="hint" class="hint" :class="{ 'is-quiet': quiet }">
-        {{ hint }}
-      </p>
 
       <slot />
     </div>
@@ -158,55 +123,32 @@ function zoneStyle(zone: { left: number; top: number; right: number; bottom: num
 </template>
 
 <style scoped>
-/* ---------- 舞台 ---------- */
 /*
- * 注意：.stage-wrap 是 position:fixed，所以**任何祖先上的 transform
- * 都会把它变成那个祖先的子盒**（transform 会创建包含块）。
- * 场景页的 <main> 子元素全是 fixed，高度本来就是 0，
- * 一旦 main 带上 transform，这个 inset:0 就会按 0 高度解析，
- * 整个舞台被推出屏幕（曾经在 room-in 动画上踩过这个坑）。
- *
- * 所以约定：**场景页的祖先一律不得有 transform / filter / perspective**。
- * 入场动画挂在 .stage 自己身上，见下面的 scene-in。
- * 这里用 100dvh 而不是 inset:0，手机上地址栏收起时不会跳。
+ * 舞台只有**一档**：宽 = min(100%, --stage-w)，高由 aspect-ratio 换出。
+ * 曾经有两档（湖边满屏、屋里留边），切页时会跳，后来统一了 ——
+ * 别为了「首页该满屏」再加回第二档。
  */
 .stage-wrap {
   position: fixed;
   inset: 0;
-  height: 100vh;
-  height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--scene-paper);
+  height: 100vh;
+  background: var(--paper);
 }
 
-/* 入场：透明 + 极轻的缩放。放在舞台上，不放在祖先上。 */
-.stage {
-  animation: scene-in 1s ease both;
-}
-
-@keyframes scene-in {
-  from {
-    opacity: 0;
-    transform: scale(1.012);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+.stage-wrap--nav-clearance {
+  padding-top: var(--nav-h);
 }
 
 .stage {
   position: relative;
-  /* 参考画布 2848×1602。两个场景共用同一比例，所以层坐标可以互换 */
+  width: min(100%, var(--stage-w));
   aspect-ratio: 2848 / 1602;
-  width: min(100vw, calc(100vh * 2848 / 1602));
-  height: min(100vh, calc(100vw * 1602 / 2848));
   overflow: hidden;
 }
 
-/* ---------- 布景层 ---------- */
 .art-layer,
 .art {
   position: absolute;
@@ -215,30 +157,28 @@ function zoneStyle(zone: { left: number; top: number; right: number; bottom: num
   user-select: none;
 }
 
-/* .art 必须是流内的：它撑出 .hot 的高度，下面的百分比才有参照。
-   写成 absolute 的话 .hot 高度为 0，点击区会整体消失。 */
+/* 热点里的画要**回到正常流**：.hot 已经有百分比定位，画跟着它的盒子走 */
 .hot .art {
   position: relative;
 }
 
 .art-layer img,
 .art img {
-  width: 100%;
   display: block;
+  width: 100%;
   -webkit-user-drag: none;
 }
 
-/* ---------- 热点 ---------- */
 .hot {
   position: absolute;
 }
 
+/* 铺满整个热点方框；真正的可点范围由里面的 .zone 决定 */
 .hot__link {
   position: absolute;
   inset: 0;
   z-index: 2;
   display: block;
-  /* 链接本身不画东西，真正可点的是里面的 .zone */
 }
 
 .hot__link:focus-visible {
@@ -251,87 +191,68 @@ function zoneStyle(zone: { left: number; top: number; right: number; bottom: num
   border-radius: 6px;
 }
 
-/* 悬停 / 聚焦：只缩放。 */
-.hot:hover .art,
-.hot:focus-within .art {
-  transform: scale(1.035);
-}
-
 .art {
   transform-origin: 50% 100%;
   transition: transform 420ms cubic-bezier(0.2, 0.7, 0.3, 1);
 }
 
-/* ---------- 顶部提示 ---------- */
-.hint {
-  position: absolute;
-  left: 50%;
-  top: 3.1%;
-  z-index: 3;
-  transform: translateX(-50%);
-  white-space: nowrap;
-  padding: 0.52em 1.5em;
-  border-radius: 999px;
-  background: var(--scene-paper-veil);
-  color: var(--scene-ink-soft);
-  text-align: center;
-  font-size: clamp(9px, 0.82vw, 14px);
-  letter-spacing: 0.28em;
-  text-indent: 0.28em;
-  pointer-events: none;
-  transition: opacity 600ms ease;
+.hot:hover .art,
+.hot:focus-within .art {
+  transform: scale(1.035);
 }
 
-.hint.is-quiet {
-  opacity: 0.34;
-}
+/* ---------- 层的动效：都是零点几度，靠时长与原点分远近 ---------- */
 
-/* ---------- 各层自身的呼吸 / 摇曳 ---------- */
-/* 幅度都很小。这是环境动效，不是表演。 */
 .motion-sway img {
-  animation: sway 9s ease-in-out infinite;
   transform-origin: 20% 0;
+  animation: 9s ease-in-out infinite sway;
 }
+
 .motion-sway-soft img {
-  animation: sway-soft 11s ease-in-out infinite;
   transform-origin: 50% 100%;
+  animation: 11s ease-in-out infinite sway-soft;
 }
+
 .motion-sway-strong img {
-  animation: sway-strong 7s ease-in-out infinite;
   transform-origin: 30% 100%;
+  animation: 7s ease-in-out infinite sway-strong;
 }
+
 .motion-breathe img {
-  animation: breathe 5.5s ease-in-out infinite;
   transform-origin: 50% 100%;
+  animation: 5.5s ease-in-out infinite breathe;
 }
 
 @keyframes sway {
   0%,
   100% {
-    transform: rotate(0deg);
+    transform: rotate(0);
   }
   50% {
     transform: rotate(0.6deg);
   }
 }
+
 @keyframes sway-soft {
   0%,
   100% {
-    transform: rotate(0deg);
+    transform: rotate(0);
   }
   50% {
     transform: rotate(0.35deg);
   }
 }
+
 @keyframes sway-strong {
   0%,
   100% {
-    transform: rotate(0deg) scaleY(1);
+    transform: rotate(0) scaleY(1);
   }
   50% {
     transform: rotate(0.7deg) scaleY(1.01);
   }
 }
+
 @keyframes breathe {
   0%,
   100% {
@@ -339,25 +260,6 @@ function zoneStyle(zone: { left: number; top: number; right: number; bottom: num
   }
   50% {
     transform: scale(1.006);
-  }
-}
-
-/*
-  竖屏手机：舞台按 16:9 铺满会变成一条两成高的窄带，
-  上方下方各留一大片空白，而文字和热点都缩到看不清。
-  （原文的解法是直接居中，那在竖屏上就是一条带子。）
-
-  这里改成：舞台顶到视口顶部，高度按比例算，剩下的空间交给 slot 里的文案。
-  不改比例、不裁切 —— 裁切会把 left:80% 的小木屋整块切掉。
-*/
-@media (max-aspect-ratio: 1 / 1) {
-  .stage-wrap {
-    align-items: flex-start;
-  }
-  .stage {
-    width: 100vw;
-    height: auto;
-    flex: 0 0 auto;
   }
 }
 </style>

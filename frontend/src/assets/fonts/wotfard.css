@@ -1,0 +1,25 @@
+/*
+ * 拉丁字体：Wotfard Regular
+ *
+ * 自托管，**不子集** —— 整套只有 444 个字形，woff2 后 23 KB，
+ * 整包上线比养一条切片管道省事（中文那套才需要子集，见同目录 README）。
+ *
+ * 只声明 font-weight: 400 一档，因为免费版就只有这一档（见 README 的授权一节）。
+ * 站上对拉丁要求 500 的地方（首页字标 .intro__name）会由这一档顶上；
+ * 700 只出现在导航，而导航的字是汉字，走的是中文字体的真粗体。
+ *
+ * 实测（Chrome，canvas 量同一串「LIzao ILW 0123」的宽度）：
+ *   400 / 500 / 700 三档都是 281px，而 Segoe UI 264px、微软雅黑 289px ——
+ *   说明字体确实生效，且**浏览器没有做合成加粗**。想要的正是这个：
+ *   伪粗体会把几何字形的轮廓撑糊，宁可让它就细着。
+ *
+ * 它没有中文字形，中文由字体栈里它后面的中文字体接手。缺字回退是逐字的，
+ * 所以**不需要 unicode-range**（那是给同一字体的分片用的）：见 main.css 的 --font-latin。
+ */
+@font-face {
+  font-family: 'Wotfard';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./wotfard-regular.woff2') format('woff2');
+}

@@ -66,3 +66,7 @@ backend/media/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+
+# Agent 工作区（本地草稿）：备份 tar 包、试色截图、构建日志、长期记忆。
+# 42M 的临时产物，不属于站点源码，不上传。
+.workbuddy/

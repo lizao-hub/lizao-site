@@ -1,109 +1,163 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import PhotoTile from '@/components/PhotoTile.vue'
-import PhotoLightbox from '@/components/PhotoLightbox.vue'
-import SectionFade from '@/components/SectionFade.vue'
-import { friendAlbums, friendPhotos, myPhotos, myPhotosIsEmpty } from '@/data/photos'
+/**
+ * 影像。屋里桌上那台相机点开就是这里。
+ *
+ * 从上到下三段（和项目页同一种节奏）：
+ *   1. 门面图 —— 举着相机取景，取景框里正是湖边那幅景。这页是相机的去向，
+ *      图就该是「正透过相机在看」。摆放由 PagePlaceholder 负责。
+ *   2. **照片墙** —— `assets/photos/` 下的每张照片，一行三张、正方形。
+ *   3. 页尾一句实话（「共 N 张，还会再加。」）—— 由 PagePlaceholder 的
+ *      `footnote` 给。**不再有「还在造」那句**：照片就在上面摆着。
+ *
+ * **加图不用改代码**：`import.meta.glob` 在构建期把目录里的图全收进来。
+ * 换一批照片就是换一批文件，删掉也不报错（空的就什么都不渲染）。
+ */
+import PagePlaceholder from '@/components/PagePlaceholder.vue'
+import banner from '@/assets/backgrounds/gallery/gallery.webp'
 
-const mineIndex = ref<number | null>(null)
-const friendIndex = ref<number | null>(null)
-
-/** 朋友照片按相册分组展示，但灯箱要能跨相册翻页，所以算好每个相册的起始下标 */
-const friendOffsets = computed(() => {
-  let acc = 0
-  return friendAlbums.map((album) => {
-    const start = acc
-    acc += album.photos.length
-    return start
-  })
+/**
+ * 我的照片。
+ *
+ * glob 是**构建期**展开的：加图 / 删图 / 改名都不用动这个文件。
+ * 按文件名排序，数字按数值比 —— 所以 `2-xxx` 排在 `10-xxx` 前面，
+ * 和文件名给人的直觉一致（普通字典序会把 10 排到 2 前面）。
+ * 想指定顺序，就在文件名前面加序号。
+ */
+const modules = import.meta.glob<string>('../assets/photos/*.{jpg,jpeg,png,webp,avif}', {
+  eager: true,
+  import: 'default',
 })
+
+const photos = Object.entries(modules)
+  .sort(([a], [b]) => a.localeCompare(b, 'zh-Hans-CN', { numeric: true }))
+  .map(([, src], i) => ({
+    src,
+    alt: `影像 ${ordinal(i)}`,
+  }))
+
+/** 序号 01 / 02 / 03，和首页、项目页是同一种数法。 */
+function ordinal(index: number): string {
+  return String(index + 1).padStart(2, '0')
+}
 </script>
 
 <template>
-  <main class="shell page-top page-bottom">
-    <header>
-      <h1 class="text-[1.8rem] leading-tight sm:text-[2rem]">影像</h1>
-      <p class="mt-5 max-w-[40rem] text-[0.95rem] leading-[1.9] text-ink-soft">
-        我自己拍的照片，和朋友们的照片。点开可以看大图。
-      </p>
-    </header>
+  <PagePlaceholder
+    label="影像"
+    :image="banner"
+    image-alt="举着相机取景"
+    :footnote="`共 ${photos.length} 张，还会再加。`"
+  >
+    <!--
+      照片墙走 .plate（= --page-w 本身），和上面那张门面图**同宽同边** ——
+      这一页上下的图因此都落在同一条线上，也和另外三个视图的主图对齐。
+    -->
+    <section v-if="photos.length" class="plate gallery">
+      <h2 class="sr-only">照片</h2>
 
-    <!-- 我的照片 -->
-    <section class="mt-14">
-      <h2 class="text-[1.2rem]">我的照片</h2>
-      <div class="dash-rule mt-4" />
-
-      <div v-if="myPhotos.length > 0" class="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        <SectionFade
-          v-for="(photo, i) in myPhotos"
-          :key="photo.id"
-          as="div"
-          :delay="i * 50"
-        >
-          <PhotoTile
+      <ul class="gallery__grid">
+        <li v-for="photo in photos" :key="photo.src" class="photo">
+          <img
+            class="photo__img"
             :src="photo.src"
-            :alt="`我的照片：第 ${photo.index} 张`"
-            :caption="photo.note"
-            @open="mineIndex = i"
+            :alt="photo.alt"
+            loading="lazy"
+            decoding="async"
           />
-        </SectionFade>
-      </div>
-
-      <div
-        v-else-if="myPhotosIsEmpty"
-        class="mt-6 grid aspect-[4/3] place-items-center border border-dashed border-line px-8 text-center sm:aspect-[16/6]"
-      >
-        <p class="max-w-[34rem] text-[0.9rem] leading-relaxed text-ink-soft">
-          这里还空着。把压过的照片放进
-          <span class="text-[0.85rem] text-accent">src/assets/photos-life/</span>
-          ，这一格会自己满。
-        </p>
-      </div>
+        </li>
+      </ul>
     </section>
-
-    <!-- 朋友的照片 -->
-    <section class="mt-16">
-      <h2 class="text-[1.2rem]">朋友的照片</h2>
-      <div class="dash-rule mt-4" />
-
-      <p v-if="friendAlbums.length === 0" class="mt-6 text-[0.9rem] text-ink-soft">
-        照片还在路上。
-      </p>
-
-      <div v-for="(album, ai) in friendAlbums" :key="album.album" class="mt-8">
-        <p class="mt-6 text-[0.75rem] text-ink-soft">
-          {{ album.name }} / {{ album.photos.length }} 张
-        </p>
-
-        <div class="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          <SectionFade
-            v-for="(photo, pi) in album.photos"
-            :key="photo.id"
-            as="div"
-            :delay="pi * 50"
-          >
-            <PhotoTile
-              :src="photo.src"
-              :alt="`${album.name}：第 ${photo.index} 张`"
-              :caption="photo.note"
-              @open="friendIndex = (friendOffsets[ai] ?? 0) + pi"
-            />
-          </SectionFade>
-        </div>
-      </div>
-    </section>
-
-    <PhotoLightbox
-      :photos="myPhotos"
-      :index="mineIndex"
-      label="我的照片"
-      @update:index="mineIndex = $event"
-    />
-    <PhotoLightbox
-      :photos="friendPhotos"
-      :index="friendIndex"
-      label="朋友的照片"
-      @update:index="friendIndex = $event"
-    />
-  </main>
+  </PagePlaceholder>
 </template>
+
+<style scoped>
+/*
+ * 照片墙。上边距把它和门面图拉开，下边距交给 PagePlaceholder 的按语
+ * （它自己还有 2.5rem）—— 两处加起来才是「照片 / 按语」之间的距离。
+ * 这两个数和项目页清单是同一套，两页因此是同一种节奏。
+ */
+.gallery {
+  padding-top: 4.75rem;
+  padding-bottom: 1.5rem;
+}
+
+/*
+ * 一行三张。列间距与行间距同一个值，横竖看起来才是均匀的一片。
+ *
+ * 间距放得比正文松：一排照片挨太紧会糊成一整块纹理，看不出每张在拍什么。
+ * 2.5rem（正常桌面视口下 40px）下三张之间才有呼吸。
+ * **代价是格子跟着变小** —— 三列都是 1fr，间距吃掉多少格子就少多少
+ * （--page-w 914 时约 286 → 275px 见方），所以别再往上加太多。
+ *
+ * 固定三列，不做窄屏分支 —— 全站按桌面视口设计（见 CONTEXT.md）。
+ */
+.gallery__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2.5rem;
+}
+
+/*
+ * 一张照片 = 一块白相纸：正方形，四周一圈白边，中间是裁成正方形的图。
+ *
+ * 正方形走 aspect-ratio。Tailwind 的 preflight 设了 `box-sizing: border-box`，
+ * 而 border-box 下 aspect-ratio 算的是**外框** —— 于是连白边一起是正方形，
+ * 白边不会把格子挤成上下比左右瘦的长条。这条要是改了 box-sizing，
+ * 整片就会歪。
+ *
+ * 白边用**百分比**（相对格子宽度，275px 的格子约合 10px），
+ * 不用 px 也不用 vw：格子的实际尺寸由 --page-w 决定，而 --page-w 同时
+ * 跟视口宽和视口高走 —— 写死 px 在大屏会显得太细，写 vw 又会在
+ * 宽而矮的屏上偏厚。百分比跟着格子一起缩放，任何视口下都是同一个比例。
+ * （格子宽度 = (--page-w − 两条 gap) / 3，见 .gallery__grid。）
+ *
+ * 悬停时整块相纸放大一点、投影跟着拉开 —— 像把它从纸面上捏起来。
+ * 只走 transform 与 box-shadow（不动 width / padding），所以**不推挤邻居**：
+ * 放大 5% 在 40px 的间距里铺得开（单边各让出 7px，剩下 26px），两张不会叠上。
+ * 缓动曲线与时长跟站上的按钮是同一套（那条弹性曲线）。
+ */
+.photo {
+  display: block;
+  aspect-ratio: 1 / 1;
+  padding: 3.5%;
+  background: var(--photo-frame);
+  border: 1px solid var(--line-soft);
+  /* 一点硬偏移，像压在纸上的实体 —— 站上的立体感靠色块偏移，不用模糊投影 */
+  box-shadow: 2px 2px 0 var(--line-soft);
+  transition:
+    transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.photo:hover {
+  transform: scale(1.05);
+  /* 投影拉开 = 离纸面更远，仍然没有模糊量（模糊投影是站上的禁忌） */
+  box-shadow: 6px 6px 0 var(--line-soft);
+}
+
+/*
+ * 减少动效时不留「放大」这个过程，直接落到悬停的终态。
+ *
+ * main.css 那条全站规则只把时长压到 0.01ms，缩放本身还在 ——
+ * 而这个效果纯属装饰，没必要让对动效敏感的人看到画面一跳。
+ * 光标也**不改成手型**：照片仍然不可点（没有大图 / 灯箱），
+ * 手型会许一个按下去什么也不会发生的承诺。
+ */
+@media (prefers-reduced-motion: reduce) {
+  .photo:hover {
+    transform: none;
+  }
+}
+
+/*
+ * 图裁满内框：原图什么比例都行，摆进来一律是正方形，不拉变形、不留白边。
+ * 裁掉的是构图边缘 —— **竖图和人像会被裁得比较狠**，
+ * 将来真放进这种图，得回来给它们单独一档（比如 `object-position: top`）。
+ */
+.photo__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+</style>

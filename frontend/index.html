@@ -2,24 +2,29 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="alternate icon" href="/favicon.ico" sizes="32x32" />
+    <!--
+      站点图标。全在 public/ 下，由 npm run build-icons 从 scripts/icon-source.png 生成
+      （源图是 512 的位图，没有矢量可依，所以没有 .svg 那一份）。
+      ico 里打包了 16 / 32 / 48 三帧，`sizes="any"` 让浏览器自己挑最合适的那帧；
+      192 给高分屏与「添加到主屏」；180 那枚在生成时就垫了纸色底（iOS 不给透明图配底）。
+    -->
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" href="/favicon-192.png" type="image/png" sizes="192x192" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>LI枣的自留地</title>
+    <title>LIzao 的自留地</title>
     <meta
       name="description"
       content="李泽敖的个人网站：写的东西、拍的照片，以及湖边那间小屋。"
     />
-    <meta name="theme-color" content="#f6f3ec" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#1f1d19" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f6f9f7" />
 
     <!--
       社交卡片。用湖景合成图裁的 1200×630，由 npm run build-scenes 生成。
       首屏本身就是一张画，这是这个站能给出的最好的 og:image。
     -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="LI枣的自留地" />
+    <meta property="og:title" content="LIzao 的自留地" />
     <meta
       property="og:description"
       content="李泽敖的个人网站：写的东西、拍的照片，以及湖边那间小屋。"
@@ -30,28 +35,16 @@
     <meta name="twitter:card" content="summary_large_image" />
 
     <!--
-      在 CSS 加载之前先把底色定下来，否则深色模式下会闪一下白。
-      色值必须和 main.css 里的 --paper 一致。
-
-      明暗现在只跟随系统偏好：主题切换按钮已移除（见 ADR-0004 的修订）。
-      localStorage 里如果残留着旧版本写下的值，仍然尊它 ——
-      这样以前手动选过深色的人不会突然被改回浅色。
+      在 CSS 加载之前先把底色定下来，否则会闪一下纯白。
+      色值必须和 main.css 里的 --paper 一致（全站唯一的页面底色，
+      也就是湖边那幅景的纸色）。
+      只有一套光明配色，不需要脚本判断明暗。
     -->
-    <script>
-      ;(function () {
-        var root = document.documentElement
-        try {
-          var stored = localStorage.getItem('lizao-theme')
-          var dark =
-            stored === 'dark' ||
-            (stored !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)
-          root.classList.toggle('dark', dark)
-          root.style.backgroundColor = dark ? '#1f1d19' : '#f6f3ec'
-        } catch (e) {
-          root.style.backgroundColor = '#f6f3ec'
-        }
-      })()
-    </script>
+    <style>
+      html {
+        background-color: #f6f9f7;
+      }
+    </style>
   </head>
   <body>
     <div id="app"></div>
