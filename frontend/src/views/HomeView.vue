@@ -78,28 +78,15 @@ onBeforeUnmount(() => window.clearTimeout(timer))
   --intro-shift-y: 50%;
 }
 
-/* 小屋上方那句引导语。跟着小屋的中轴线走。 */
+/*
+ * 小屋上方那句引导语。跟着小屋的中轴线走。
+ *
+ * 只给位置。字号（按 --scene-u 走、下限 11px）、字距、颜色、透明度、
+ * `nowrap` 与窄屏的覆盖**全在 main.css 的 .enter-hint 里** —— 和屋里
+ * 共用一份，改观感去改那里，别在这一页重抄一遍。
+ */
 .enter-hint {
-  position: absolute;
   left: 84.9%;
   top: 65.6%;
-  transform: translateX(-50%);
-  white-space: nowrap;
-  /*
-   * 字号按**舞台**走（--scene-u），和小屋上方那块字一个规矩。
-   *
-   * 系数从 0.85 提到 1：它原本是这块景里最小的一档，比屋里的分节标签
-   * （0.9）还小 —— 但它是**全站唯一的入口提示**，小屋可点这件事只有这一句
-   * 在说。功能性提示不该比装饰性的分节标签还轻。
-   * 下限也从 9px 提到 11px：9px 在任何屏幕上都是糊的。
-   *
-   * 压在湖水上（底 L≈0.25），透明度给到 0.88 —— 黑字在这片水面上
-   * 理论上约 4.9:1，实测会被抗锯齿再吃掉一点，留出余量。
-   */
-  font-size: clamp(11px, var(--scene-u), 15px);
-  letter-spacing: 0.18em;
-  color: var(--ink-black);
-  opacity: 0.88;
-  pointer-events: none;
 }
 </style>

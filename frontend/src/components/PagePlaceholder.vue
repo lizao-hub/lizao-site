@@ -1,6 +1,13 @@
 <script setup lang="ts">
 /**
- * 这行「还在造」的字 —— 内容补上来之后，它退成页尾的一句按语。
+ * 内容页的壳：门面图 + 内容 + 页尾一句按语。
+ *
+ * 页尾那句话由 `footnote` 给 —— 它是**这一页的实话**（「目前 3 个项目，
+ * 都在这上面了。」），不是提示，也不是进度。
+ *
+ * ⚠️ 不传 `footnote` 时它会退回「这一页还在造」那句。**那是给真的空页留的**，
+ * 有内容的两个页（项目清单、影像）都必须传 —— 页尾不许出现「还在造」，
+ * 内容就在上面摆着，说它没做完是自我否定。
  */
 defineProps<{
   label: string
@@ -8,6 +15,8 @@ defineProps<{
   image?: string
   /** 场景图的替代文本；纯装饰的图传空字符串 */
   imageAlt?: string
+  /** 页尾那句实话。有内容的页都要给。 */
+  footnote?: string
 }>()
 </script>
 
@@ -32,13 +41,19 @@ defineProps<{
       <!-- 给搜索引擎和读屏一个标题，页面本身不显示 -->
       <h1 class="sr-only">{{ label }}</h1>
 
-      <p class="placeholder__line">「{{ label }}」这一页还在造。</p>
+      <!-- 有内容：页尾是一句实话，到此为止 -->
+      <p v-if="footnote" class="placeholder__line">{{ footnote }}</p>
 
-      <p class="placeholder__hint">
-        先回
-        <RouterLink class="placeholder__link" to="/room">屋里</RouterLink>
-        待着吧。
-      </p>
+      <!-- 没内容：这一页确实还没做完，才说这句话 -->
+      <template v-else>
+        <p class="placeholder__line">「{{ label }}」这一页还在造。</p>
+
+        <p class="placeholder__hint">
+          先回
+          <RouterLink class="placeholder__link" to="/room">屋里</RouterLink>
+          待着吧。
+        </p>
+      </template>
     </div>
   </main>
 </template>

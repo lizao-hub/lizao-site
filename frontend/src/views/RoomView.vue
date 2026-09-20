@@ -181,17 +181,35 @@ onBeforeUnmount(() => window.clearTimeout(timer))
   height: 1em;
 }
 
+/*
+ * 窄屏：两枚联系方式图标的最小可点范围。
+ *
+ * 图标走 1em（.links 的 clamp 下限 26px），加 0.18em 的 padding 只有约 35px，
+ * 手指点不准。用一枚透明的 ::after 把可点范围外扩 0.18em（≈44px）——
+ * **不动 padding**：padding 一改，两枚图标之间的实际间距（.links 的 gap
+ * 是 0.25em，加上各自的 padding）就跟着变，那样改的是观感不是手感。
+ * 外扩后两枚之间还剩约 6px 空隙，不会互相抢点击。
+ */
+@media (max-width: 640px) {
+  .links__item {
+    position: relative;
+  }
+
+  .links__item::after {
+    content: '';
+    position: absolute;
+    inset: -0.18em;
+  }
+}
+
+/*
+ * 书桌上方那句引导语。只给位置 ——
+ * 字号、字距、颜色、透明度、`nowrap` 与窄屏的覆盖都在 main.css 的
+ * .enter-hint 里（和湖边共用一份，见 HomeView.vue 同一处的说明）。
+ */
 .enter-hint {
-  position: absolute;
   left: 62.9%;
   top: 58.6%;
-  transform: translateX(-50%);
-  white-space: nowrap;
-  font-size: clamp(11px, var(--scene-u), 15px);
-  letter-spacing: 0.18em;
-  color: var(--ink-black);
-  opacity: 0.88;
-  pointer-events: none;
 }
 
 </style>

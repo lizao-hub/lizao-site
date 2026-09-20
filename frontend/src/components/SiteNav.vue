@@ -8,9 +8,11 @@
  * 依据是当天 16:08 的 `dist/assets/index-CLVRkYAK.js` 与 `index-ByAWI7oe.css`——
  * 类名、props、路由判断都原样留着，**注释留不住**，所以这里的注释是重建时补的。
  *
- * **不做窄屏适配**（全站约定）：没有汉堡菜单，也不做折叠。
- * 三个去向是写死的数组，不是从路由表里推的 —— 导航该是「选出来的几条路」，
- * 而不是「所有路由的目录」。
+ * **不做汉堡菜单**（这条没变）：三个去向是写死的数组，不是从路由表里推的 ——
+ * 导航该是「选出来的几条路」，而不是「所有路由的目录」。窄屏也不折叠：
+ * 四个字排得下（375px 上实测占 224px，可用 360px），折进一个按钮里反而是
+ * 把唯一的去向藏起来。窄屏只做两件事：收紧间距、把可点范围托到 44px
+ * （见样式末尾那段）。
  */
 import { RouterLink, useRoute } from 'vue-router'
 
@@ -95,5 +97,59 @@ function isCurrent(to: string): boolean {
   display: flex;
   align-items: center;
   height: 100%;
+}
+
+/* ------------------------------------------------------------------
+   手机：收紧间距 + 把可点范围托到 44px
+
+   两个字 / 三个字的链接，文字本身只有 32×18 —— 手指按不准（WCAG 2.5.5
+   建议 44×44）。这里**不改 padding 也不改字号**：padding 会把两个链接
+   之间的实际间距一起改掉，那动的是观感；字号在 main.css 那一档里。
+   只把盒子的最小高度提到 44px、让它自己居中，文字还在原来的位置上。
+
+   代价是「当前页底下那道短线」跟着盒子长高了（它挂在 li 上、定位在
+   li 的下沿），所以要把它收回来贴在字的下面 —— 0.45rem 是按
+   「字高 18px 居中于 44px」算的：字底落在 31px，线再往下 4px。
+
+   横向只收间距（gap-8 → 1.25rem）：375px 上整条导航实测 224px，
+   可用 360px，够；收是为了让四个字离屏幕边远一点，不是挤。
+   ------------------------------------------------------------------ */
+@media (max-width: 640px) {
+  .nav-wide {
+    padding-inline: 1.25rem;
+  }
+
+  .nav-links {
+    gap: 1.25rem;
+  }
+
+  .nav-link,
+  .nav-home {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  /*
+    横向：文字只有 32px 宽，用一枚透明的 ::after 各往外扩 0.375rem（6px）
+    凑到 44px。**不动 padding** —— padding 会把 li 一起撑宽，当前页那道
+    短线（`w-full`）就跟着变长，而它是贴着字宽画的。
+    两项之间的空档仍有 20−12 = 8px，不会互相抢点击。
+  */
+  .nav-link,
+  .nav-home {
+    position: relative;
+  }
+
+  .nav-link::after,
+  .nav-home::after {
+    content: '';
+    position: absolute;
+    inset: 0 -0.375rem;
+  }
+
+  .nav-links span {
+    bottom: 0.45rem;
+  }
 }
 </style>

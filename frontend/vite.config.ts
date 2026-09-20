@@ -25,6 +25,18 @@ export default defineConfig({
    * 想看到留言和照片就先把后端跑起来
    * （`cd backend && uv run uvicorn main:app --reload --port 8000`）。
    */
+  /*
+   * CSS 的编译目标单独压到 safari15。
+   *
+   * 不写的话 esbuild 会把 `@media (max-width: 640px)` 压成范围语法
+   * `@media (width <= 640px)` —— 那是 Media Queries Level 4，
+   * **iOS 16.4 才开始认**（2023 年 3 月）。窄屏分支是手机上唯一在起作用的
+   * 那套规则，被旧 Safari 整条忽略掉，等于这次适配白做。
+   * JS 的目标不动（那一档由 Vite 自己定）。
+   */
+  build: {
+    cssTarget: 'safari15',
+  },
   server: {
     proxy: {
       '/api': 'http://localhost:8000',

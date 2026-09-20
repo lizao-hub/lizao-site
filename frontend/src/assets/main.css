@@ -26,6 +26,13 @@
    2. 立体感靠色块偏移与手绘排线，**不用模糊投影**。纸是平的。
    3. 只有光明一套。暗色模式已整块删除，不要再往回加第二套令牌。
 
+   第 4 条是关于**手机**的（2026-09-20 立，此前是「不做窄屏适配」，已废止）：
+   站是按桌面视口画的，但**手机要能用** —— 断点只有一个 640px（Tailwind 的
+   sm），≤480px 再收一档。窄屏上做的事只有三件：把景里的字挪到画下面的纸上、
+   把正文的边距与列数收一档、把可点范围托到 44px。**不做第二套版式**，
+   也不做汉堡菜单：导航仍然是那四个字，只是让它们更好按。
+   每处窄屏分支都写在它管的那条规则旁边，不另开一节。
+
    设计约定散在下面各处注释与 frontend/README.md 里（「设计令牌」「几个容易
    踩的坑」两节）。曾经有一份根目录 CONTEXT.md 和 docs/adr/ 编号文档，
    已废弃删除 —— 别再往那两个地方写。
@@ -326,6 +333,20 @@
   }
 
   /*
+    手机：撤掉那条留位。
+
+    手机浏览器的滚动条是浮层型的，本来就不占宽度 —— `stable` 在这里**只留位、
+    不画条**，于是整页可用宽度凭空少 15px，而那 15px 落在右边：所有内容
+    （导航、景、照片墙）横着偏出中心半条，看着像没对齐。桌面要它是因为
+    Windows 的滚动条是真占位的，手机上没有这个理由。
+  */
+  @media (max-width: 640px) {
+    html {
+      scrollbar-gutter: auto;
+    }
+  }
+
+  /*
     这里曾经有一条 `html:has([data-scene])`，让场景页的根元素单独铺一层
     比站点纸冷的「场景纸」—— 因为「为滚动条留出的那一条」落在 .stage-wrap
     （fixed 铺满视口）的内容盒之外，画的是根元素底色。
@@ -392,6 +413,20 @@
     margin-inline: auto;
     width: min(100%, var(--page-w));
     padding-inline: 2rem;
+  }
+
+  /*
+    手机：内边距收一档。
+
+    2rem 是按桌面那条 914px 的正文宽定的（两边各 32px，正文 850）；
+    手机屏宽只有 375，同样的 32px 要吃掉 17% 的宽度，一行只剩 30 出头的汉字位。
+    1.25rem（20px）把正文还给内容，同时**两边仍然留着纸边** —— 正文顶到屏幕
+    边缘在手机上是最难读的一种排版。窄屏只改这一个数，宽度本身不动。
+  */
+  @media (max-width: 640px) {
+    .shell {
+      padding-inline: 1.25rem;
+    }
   }
 
   /*
@@ -540,6 +575,33 @@
   }
 
   /*
+    物件上方那句引导语（湖边的「点一下小木屋」、屋里的「点一下相机、电脑、书本」）。
+
+    和 .intro 一个规矩：**排版只写这一份**，两个场景页各自只给 left / top
+    （见 HomeView.vue 与 RoomView.vue）—— 曾经两页各抄一整份，字号改一处漏一处。
+
+    它压在画上（湖水 L≈0.25 / 木地板），透明度给到 0.88 —— 黑字在那上面
+    理论上约 4.9:1，实测会被抗锯齿再吃掉一点，留出余量。
+    系数是 1（不是 0.85）：它比屋里的分节标签还小就说不过去了，
+    它是**全站唯一的入口提示**，小屋可点这件事只有这一句在说。
+    下限 11px 也是个下限：9px 在任何屏幕上都糊。
+
+    `nowrap` 是给桌面写的（一行念完，不折到小屋身上）；
+    **窄屏要撤掉**，见下面窄屏那一段 —— 11px 上这行字有 143px 宽，
+    落在画的右半边就会顶出画沿。
+  */
+  .enter-hint {
+    position: absolute;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    font-size: clamp(11px, var(--scene-u), 15px);
+    letter-spacing: 0.18em;
+    color: var(--ink-black);
+    opacity: 0.88;
+    pointer-events: none;
+  }
+
+  /*
     分节标签与条目：屋里那三段简历（教育经历 / 竞赛获奖 / 其他）用，湖边不用。
 
     标签是**小标题**，不是内容 —— 比条目再轻一档，字距开到 0.3em 认得出是标题；
@@ -602,6 +664,78 @@
       opacity: 1;
       transform: translateX(var(--intro-shift-x, 0))
         translateY(var(--intro-shift-y, 0));
+    }
+  }
+
+  /* ------------------------------------------------------------------
+     窄屏（手机）：景里的字落到画下面的纸上
+
+     「为什么窄屏不把字压在景上」写在 SceneStage.vue 的窄屏那一段（盒子那半边）。
+     这里只管**排法** —— 那块字的字号阶梯、字距、颜色仍然和桌面共用上面那一份，
+     所以两页的观感还是同一套，只是换了个落脚的地方。
+
+     三件事：
+     1. 定位改回文档流。`left/top/--intro-shift-*` 是给景里那套百分比坐标用的，
+        流式布局里全都不成立（屋里那个 -50% 会把整块横着挪半块出去）。
+     2. 入场动画换成纯纵向的淡入 —— 上面那条 keyframes 收尾在
+        `translateX(var(--intro-shift-x))` 上，竖屏下会横着跳。
+     3. 引导语撤掉 nowrap 并居中（原因见上面 .enter-hint）。
+
+     参数按屏宽走 vw：这块字在纸上，纸的宽就是屏宽，和景的缩放无关了。
+     下限比桌面各抬一档（11px → 12px）—— 它现在是这一页仅有的内容，
+     12px 才是手机上读得舒服的底线；上限仍收在桌面那一档以内。
+     ------------------------------------------------------------------ */
+  @media (max-width: 640px) {
+    .intro {
+      position: static;
+      transform: none;
+      max-width: 34rem;
+      margin: 1.75rem auto 0;
+      padding-inline: 1.5rem;
+      animation: intro-rise 900ms ease both;
+    }
+
+    @keyframes intro-rise {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    .intro__name {
+      font-size: clamp(26px, 7.4vw, 40px);
+    }
+
+    .intro__meta,
+    .intro__murmur,
+    .intro__item {
+      font-size: clamp(12px, 3.2vw, 16px);
+    }
+
+    .intro__label {
+      font-size: clamp(11px, 3vw, 14px);
+    }
+
+    /*
+      引导语：撤掉 nowrap 居中（原因见上面），字号抬到 12px。
+
+      11px 是它在**景里**时的下限 —— 那时它压在画上，要小才不抢画。
+      挪到纸上之后它是这一页仅有的入口提示（「点一下小木屋」），
+      12px 才是手机上读得清的那一档，和 .intro__meta 同一档。
+    */
+    .enter-hint {
+      position: static;
+      transform: none;
+      white-space: normal;
+      max-width: 34rem;
+      margin: 1.25rem auto 0;
+      padding-inline: 1.5rem;
+      text-align: center;
+      font-size: clamp(12px, 3.2vw, 15px);
     }
   }
 

@@ -8,6 +8,13 @@
  * 与 `index-ByAWI7oe.css`（样式与 @keyframes）。类名、props、事件名都原样留着，
  * **注释留不住** —— 这里的注释是重建时按产物里能看出的行为补的。
  *
+ * ## 舞台的两层：画（.stage__art）与字（.stage__caption）
+ *
+ * 桌面上下两层**盒子完全重合**（都是 `.stage` 那一块），所以图层坐标、文案
+ * 位置、点击区域和拆开之前一字不差。分成两层是为了窄屏：手机竖屏的画只占
+ * 屏幕四分之一高，字压在画上会被裁掉（详见文件末尾「窄屏」那一段），
+ * 那时字要能落到画的下面去 —— 于是需要一层「只装画」的盒子把它撑住。
+ *
  * ## 它只做三件事
  *
  * 1. **按数组顺序叠图层**。`layers` 的先后就是远近：数组前面的在远处。
@@ -81,43 +88,55 @@ function zoneStyle(zone: SceneZone) {
 <template>
   <div class="stage-wrap" :class="navClearance && 'stage-wrap--nav-clearance'">
     <div class="stage" :data-scene="scene.id">
-      <template v-for="layer in drawList" :key="`layer-${layer.id}`">
-        <!-- 热点：可点的区域（zones）压在画上面 -->
-        <div
-          v-if="hotspotOf(layer.id)"
-          class="hot"
-          :style="layerStyle(layer)"
-        >
-          <RouterLink
-            class="hot__link"
-            :to="hotspotOf(layer.id)!.to"
-            :aria-label="hotspotOf(layer.id)!.label"
+      <!--
+        画。图层全是绝对定位的，百分比以这个盒子为参照 ——
+        它必须和 .stage 一样大（桌面就是 inset:0，窄屏它才自己撑住 16:9）。
+      -->
+      <div class="stage__art">
+        <template v-for="layer in drawList" :key="`layer-${layer.id}`">
+          <!-- 热点：可点的区域（zones）压在画上面 -->
+          <div
+            v-if="hotspotOf(layer.id)"
+            class="hot"
+            :style="layerStyle(layer)"
           >
-            <span
-              v-for="(zone, i) in hotspotOf(layer.id)!.zones"
-              :key="`zone-${layer.id}-${i}`"
-              class="zone"
-              :style="zoneStyle(zone)"
-            />
-          </RouterLink>
+            <RouterLink
+              class="hot__link"
+              :to="hotspotOf(layer.id)!.to"
+              :aria-label="hotspotOf(layer.id)!.label"
+            >
+              <span
+                v-for="(zone, i) in hotspotOf(layer.id)!.zones"
+                :key="`zone-${layer.id}-${i}`"
+                class="zone"
+                :style="zoneStyle(zone)"
+              />
+            </RouterLink>
 
-          <span class="art" :class="layer.motion && `motion-${layer.motion}`">
-            <img :src="layer.src" :alt="hotspotOf(layer.id)!.alt ?? ''" />
+            <span class="art" :class="layer.motion && `motion-${layer.motion}`">
+              <img :src="layer.src" :alt="hotspotOf(layer.id)!.alt ?? ''" />
+            </span>
+          </div>
+
+          <!-- 装饰层：只是画，不接鼠标 -->
+          <span
+            v-else
+            class="art-layer"
+            :class="layer.motion && `motion-${layer.motion}`"
+            :style="layerStyle(layer)"
+          >
+            <img :src="layer.src" alt="" aria-hidden="true" />
           </span>
-        </div>
+        </template>
+      </div>
 
-        <!-- 装饰层：只是画，不接鼠标 -->
-        <span
-          v-else
-          class="art-layer"
-          :class="layer.motion && `motion-${layer.motion}`"
-          :style="layerStyle(layer)"
-        >
-          <img :src="layer.src" alt="" aria-hidden="true" />
-        </span>
-      </template>
-
-      <slot />
+      <!--
+        字。桌面和被点名的宽屏一样是「铺满画的一层」，本身不吃鼠标
+        （.intro 自己也是 pointer-events:none，联系方式那两枚图标自己开回来）。
+      -->
+      <div class="stage__caption">
+        <slot />
+      </div>
     </div>
   </div>
 </template>
@@ -147,6 +166,19 @@ function zoneStyle(zone: SceneZone) {
   width: min(100%, var(--stage-w));
   aspect-ratio: 2848 / 1602;
   overflow: hidden;
+}
+
+/* 画：桌面就是 .stage 本身那一块，图层的百分比坐标因此不受影响 */
+.stage__art {
+  position: absolute;
+  inset: 0;
+}
+
+/* 字：同样铺满 .stage；不吃鼠标，里面的链接自己开（见 RoomView 的 .links） */
+.stage__caption {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 
 .art-layer,
@@ -260,6 +292,82 @@ function zoneStyle(zone: SceneZone) {
   }
   50% {
     transform: scale(1.006);
+  }
+}
+
+/* ==================================================================
+   窄屏（手机）：画在上，字在下
+
+   画是 2848:1602 的横幅。手机竖屏的视口高差不多是宽的两倍，所以
+   「画占满屏宽」时它只有约屏幕四分之一高（375×667 上实测 360×203），
+   上下各留一大片空纸；而压在画上那几行字是按 16:9 的高度排的 ——
+   块高 176px 对画高 203px，于是：名字折成两行、后面几行被画的下沿裁掉，
+   引导语还会横着顶出画的右沿（`white-space: nowrap`）。
+   上下留纸边本身是桌面就有的说法，**不算 bug**；被裁掉的字才算。
+
+   所以窄屏不再把字压在画上，改成纵向流式：画占满屏宽，字落到画下面的纸上。
+   字号阶梯、颜色、字距与动效仍然只在 main.css 的 .intro 那份里（那里还有
+   一段窄屏的覆盖）；这里只管**盒子**。
+
+   断点取 640px（Tailwind 的 sm，全站唯一一处窄屏分支）：
+   比这更宽的手机横屏与桌面窗口，16:9 的画在高度上是铺得开的，
+   照桌面那套「字压在景上」更好看。
+   ================================================================== */
+@media (max-width: 640px) {
+  /*
+    整块（画 + 字）在屏内居中，上下留一样宽的纸边 ——
+    和桌面「像一幅裱在纸上的画」是同一个说法。
+    用 svh 而不是 vh：手机浏览器的地址栏收起／展开会让 vh 变，
+    svh 取最小那一档，字不会被地址栏压住。
+  */
+  .stage-wrap {
+    position: static;
+    height: auto;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 100vh;
+    min-height: 100svh;
+  }
+
+  /*
+    屋里那条导航是 sticky 的、自己占文档流里的一条（64px），
+    舞台不用再让位 —— 桌面上那个 padding-top 在这里要撤掉，
+    否则空出一条导航的空白。剩下的高度才是要居中的范围。
+  */
+  .stage-wrap--nav-clearance {
+    padding-top: 0;
+    min-height: calc(100vh - var(--nav-h));
+    min-height: calc(100svh - var(--nav-h));
+  }
+
+  /* 这一层不再裁：字要落到它的下沿之外去 */
+  .stage {
+    aspect-ratio: auto;
+    overflow: visible;
+  }
+
+  /* 画自己撑住 16:9 的比例（宽高只有它一个出口） */
+  .stage__art {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 2848 / 1602;
+    overflow: hidden;
+  }
+
+  /* 字回到文档流：位置由 main.css 的窄屏那段给 */
+  .stage__caption {
+    position: static;
+  }
+
+  /*
+    可点范围托底到 44px 见方（WCAG 2.5.5 的建议值）。
+    画缩到屏宽之后，小木屋只有约 31×21、相机约 36×25 —— 手指点不准。
+    热点里最挤的一处是相机右沿到电脑左沿的约 12px 空隙，44px 兜完还剩几像素，
+    不会互相抢点击。只在窄屏生效：桌面上那几件东西本来就远大于这个尺寸。
+  */
+  .hot__link {
+    min-width: 44px;
+    min-height: 44px;
   }
 }
 </style>

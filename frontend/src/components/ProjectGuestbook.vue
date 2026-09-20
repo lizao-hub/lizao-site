@@ -106,7 +106,7 @@ function formatDate(iso: string): string {
       以前缩在「留言」标题底下，基本没人看得见。
     -->
     <div class="guestbook__row">
-      <h2 class="guestbook__lead">值得一个小心心</h2>
+      <h2 class="guestbook__lead">值得一个小心心（点赞）</h2>
       <button
         type="button"
         class="guestbook__like"
@@ -128,7 +128,7 @@ function formatDate(iso: string): string {
 
     <div class="guestbook__row">
       <h2 class="guestbook__lead">留言</h2>
-      <p class="guestbook__hint">{{ liked ? '记下了' : '觉得不错就点一下' }}</p>
+      <!-- <p class="guestbook__hint">{{ liked ? '记下了' : '觉得不错就点一下' }}</p> -->
     </div>
 
     <ul v-if="comments.length" class="guestbook__list">
@@ -360,6 +360,34 @@ function formatDate(iso: string): string {
 .guestbook__submit:disabled {
   opacity: 0.28;
   cursor: default;
+}
+
+/*
+ * 手机：三处「手按得住」的收尾。
+ *
+ * 1. 输入框字号抬到 1rem（16px）。**这一条不是审美**：iOS Safari 会对
+ *    font-size < 16px 的输入框自动放大整页，一聚焦就跳一下、还得手动缩回去。
+ *    15px 在桌面上更秀气，手机上不值这个代价。
+ * 2. 点赞按钮用 padding 撑到 44px，再用等量负 margin 抵掉 —— 这一行是
+ *    baseline 对齐的，padding 上下等量时基线不动，负 margin 让盒子
+ *    **只长在字底下**，旁边的标题和它之间的空档一格没变。
+ *    （改 gap 就是改观感了，那是另一回事。）
+ * 3. 「写上去」提到 44px 高，和站上其它可按的东西同一个下限。
+ */
+@media (max-width: 640px) {
+  .guestbook__field {
+    font-size: 1rem;
+  }
+
+  .guestbook__like {
+    padding: 0.85rem 0.5rem;
+    margin: -0.85rem -0.5rem;
+  }
+
+  .guestbook__submit {
+    min-height: 44px;
+    padding-inline: 1.75rem;
+  }
 }
 
 .guestbook__error {

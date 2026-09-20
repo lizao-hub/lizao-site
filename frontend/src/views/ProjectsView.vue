@@ -112,6 +112,21 @@ function ordinal(index: number): string {
   padding-block: 2.25rem;
 }
 
+/*
+ * 手机：序号那条槽收窄，项与项之间的留白也收一档。
+ *
+ * 4rem 是按桌面的版心定的（序号两位数也占得下，正文左边界不动）；
+ * 手机上正文只有 335px，一条 64px 的空槽要吃掉近两成，标题一行只剩
+ * 十来个汉字 —— 而序号在这里只是「数到第三个」，不需要那么宽的槽。
+ * 2.5rem 仍然放得下两位数字（0.8125rem 的字，两位约 26px）。
+ */
+@media (max-width: 640px) {
+  .project__row {
+    grid-template-columns: 2.5rem 1fr;
+    padding-block: 1.75rem;
+  }
+}
+
 /* 项与项之间一条淡线。首项不要。 */
 .project + .project {
   border-top: 1px solid var(--line-soft);
@@ -185,8 +200,15 @@ function ordinal(index: number): string {
  * 于是它比关键字浅小半档 —— 是分隔，不是内容。**别再往下调了**：
  * 试过 0.6（合成 0.34），在真机上淡到像是屏幕上的脏点，等于没画。
  * 装饰性线条不适用 WCAG 的正文阈值，但「看不见的分隔」是零分。
+ *
+ * ⚠️ **它挂在上一项的尾巴（::after），不是下一项的开头（::before）。**
+ * 2026-09-20 从前者翻成后者：一道线画在下一项的头上时，`flex-wrap`
+ * 在它前面断行，那一行就会**以一条孤立的竖线开头**（手机窄屏上
+ * 三个关键字各占一行，读起来像三条引用）。挂在尾巴上，断行发生在
+ * 「线 + 空档」之后，最坏也只是某一行的末尾多一道线，不算错。
+ * 间距与原来分毫不差：项内 0.7em + 项间 0.7em，翻过来还是 1.4em。
  */
-.project__keyword + .project__keyword::before {
+.project__keyword:not(:last-child)::after {
   content: '';
   width: 1px;
   height: 0.8em;

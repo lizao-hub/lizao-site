@@ -291,9 +291,15 @@ const neighbours = computed(() => projectNeighbours(String(route.params.slug)))
   gap: 0.8em;
 }
 
-/* 项间那条竖线：比关键字浅小半档（父级 0.56 会再乘一次）。
-   **别调更低** —— 合成到 0.34 就淡得像屏幕上的脏点，等于没画。 */
-.detail__keyword + .detail__keyword::before {
+/*
+ * 项间那条竖线：比关键字浅小半档（父级 0.56 会再乘一次）。
+ *   **别调更低** —— 合成到 0.34 就淡得像屏幕上的脏点，等于没画。
+ *
+ * 挂在上一项的尾巴上（::after）而不是下一项的开头（::before）：
+ * 手机窄屏下关键字会一个一行，线挂在开头就会让每一行都以一条孤立的竖线起头。
+ * 理由与间距的算法同列表页，见 ProjectsView.vue 的 .project__keyword。
+ */
+.detail__keyword:not(:last-child)::after {
   content: '';
   width: 1px;
   height: 0.8em;
@@ -467,6 +473,79 @@ const neighbours = computed(() => projectNeighbours(String(route.params.slug)))
 }
 
 /*
+ * 手机：表格与「上一件 / 下一件」各收一档。
+ *
+ * 表：296px 宽里塞三列（实测 94 / 117 / 85），字还是 14px 的话单元格里
+ * 每个词都要折一次行，读数这件事在折行里就散了 —— 所以压到 13px、
+ * 把列间距（padding）从 1rem 收到 0.6rem，把省下的宽度还给文字。
+ * 另外给 `figure` 加一条 `overflow-x: auto` 兜底：**万一**将来某张表列更多，
+ * 横着撑出去的是这一块、不是整页（页面横向溢出在手机上是最难看的一种坏）。
+ * 现在的三列用不上这条，它只是护栏。
+ *
+ * 相邻项目：桌面那条 2rem 的间距在手机上占掉正文宽的 10%，收到 1.25rem；
+ * 两个口子的宽度上限从 46% 抬到 50%，长项目名少折一行。
+ */
+@media (max-width: 640px) {
+  .detail__figure {
+    overflow-x: auto;
+  }
+
+  .detail__table {
+    font-size: 0.8125rem;
+  }
+
+  .detail__rowhead,
+  .detail__table thead th:first-child {
+    padding-right: 0.75rem;
+  }
+
+  .detail__cell {
+    padding-left: 0.6rem;
+  }
+
+  .detail__foot {
+    gap: 1.25rem;
+  }
+
+  .detail__foot-link {
+    max-width: 50%;
+  }
+
+  /*
+    「做过的东西」是这一页唯一的回头路，文字只有 23px 高。
+    和站上其它可按的东西同一个做法：padding 撑到 44px、负 margin 抵回去，
+    于是盒子长在字外面，版式一格没动。
+  */
+  .detail__back {
+    padding-block: 0.65rem;
+    margin-block: -0.65rem;
+  }
+
+  /*
+    最浅的那三档抬到 0.5。
+
+    表的说明、指标名、表头在桌面上是 0.38（对纸 2.9:1）—— 那里它们只是
+    「压在角落的注」，读的人是把脸凑在屏幕前的。**手机是端在手上读的**：
+    12~13px 的字在 2.9:1 上就是一片灰雾，而这个站上最实在的信息
+    （「结果」那几个数字叫什么）正写在指标名上。
+    0.5 是 4.1:1 —— 没到正文那档，层级还在（比元信息的 0.55 还差半档），
+    但已经从「看不清」挪到「读得出」。**只改窄屏**，桌面那一档不动。
+  */
+  .detail__caption,
+  .detail__metric-label {
+    opacity: 0.5;
+  }
+
+  .detail__table thead th {
+    opacity: 0.5;
+  }
+
+  .detail__foot-label {
+    opacity: 0.45;
+  }
+}
+
+/*
  * 被点名的那一行（`highlight`）。**全表只有这一行是实的。**
  * 换颜色是这一页禁止的做法，所以照这一页唯一的语言来：透明度顶到 1，
  * 底下那条线从淡痕换成看得见的那一档。其余各行一律停在 0.6。
@@ -511,6 +590,21 @@ const neighbours = computed(() => projectNeighbours(String(route.params.slug)))
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+}
+
+/*
+ * 手机：下限从 11rem 收到 8.5rem，好排成两列。
+ *
+ * 11rem 是按**最长的标签**定的（英文标签要折行，列太窄会折成三行）；
+ * 但手机上正文宽只有 335px，11rem 一列的直接结果就是**一列到底** ——
+ * 四个指标竖着排 598px 高，翻两屏才看完「结果」，而它本来是四句结论。
+ * 8.5rem（136px）在 335px 里正好是两列，标签仍然是「四个字一行」的宽度。
+ */
+@media (max-width: 640px) {
+  .detail__metrics {
+    grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+    gap: 1.5rem 1rem;
+  }
 }
 
 .detail__metric-label {
