@@ -6,6 +6,22 @@
 向 `/api/photos` 拉清单、`/media/photos/...` 取图 —— 后台上传一张、刷新影像页
 就能看到，不用重新打包前端。
 
+## 名字：模块叫 gallery，里面的东西叫 photo
+
+**模块名跟的是「前端哪一页在用它」**：`gallery.py` ↔ `views/GalleryView.vue`。
+同一套分法还有 `guestbook.py` ↔ `views/GuestbookView.vue`（而它的接口路径
+是 `/api/comments`）。所以这里的词汇刻意**不统一**：
+
+    gallery.py      这个模块 = 影像页那一块功能
+    photos_dir()    它管的东西 = 磁盘上的照片文件
+    /api/photos     公开的资源路径（管理页与影像页都在用）
+
+**别顺手把里面也改成 gallery_xxx。** 后端真正管的是照片，
+「画廊 / 影像」是那一页的说法；全改成 gallery 之后，接口路径、目录名
+（`data/photos/`、`/media/photos/`）就和这个模块对不上了。
+（名字曾经叫 `store.py` —— 那是三个模块里唯一不跟任何东西对应的一个，
+“store” 什么都能存，2026-09-23 改成现在这个。）
+
 文件名就是**一个自增 id**：`1.jpg`、`2.jpg`、`3.jpg`…… 编号由 `save_photo`
 分配（已有最大编号 +1），所以顺序就是**上传的先后**。
 

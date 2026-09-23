@@ -1,10 +1,10 @@
 """
-store.py 的自检。**不依赖 FastAPI**，在临时目录里跑，不碰真实的照片目录。
+gallery.py 的自检。**不依赖 FastAPI**，在临时目录里跑，不碰真实的照片目录。
 
 用法：
 
     cd backend
-    uv run python scripts/check_store.py
+    uv run python scripts/check_gallery.py
 
 为什么留这么一个脚本（而不是靠手点管理页）：
 
@@ -31,7 +31,7 @@ from pathlib import Path
 
 from PIL import Image
 
-# 让 `import store` 能找到上一层的模块
+# 让 `import gallery` 能找到上一层的模块
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 failures: list[str] = []
@@ -72,17 +72,17 @@ def png_bytes(size: tuple[int, int], color=(255, 0, 0, 0)) -> bytes:
 
 def test_order() -> None:
     print("\n[1] 排序：natural_key 决定照片墙的顺序")
-    import store
+    import gallery
 
     names = ["2.jpg", "10.jpg", "1.jpg", "3.jpg", "7.jpg", "100.jpg"]
     expected = ["1.jpg", "2.jpg", "3.jpg", "7.jpg", "10.jpg", "100.jpg"]
-    actual = sorted(names, key=store.natural_key)
+    actual = sorted(names, key=gallery.natural_key)
     check("按数值排（2 在 10 前，100 在最后）", actual == expected, f"得到 {actual}")
 
     # 手动丢进来的杂文件（不该发生，但真漏进来时不能让列表挂掉）。
     # 它们排在最后、不参与编号分配，也不影响正常照片之间的顺序。
     junk = ["微信图片_x.jpg", "Thumbs.jpg", "2.jpg", "10.jpg"]
-    actual = sorted(junk, key=store.natural_key)
+    actual = sorted(junk, key=gallery.natural_key)
     check(
         "没编号的文件垫到最后",
         actual[:2] == ["2.jpg", "10.jpg"],
@@ -92,21 +92,21 @@ def test_order() -> None:
 
 def test_next_index(tmp: Path) -> None:
     print("\n[2] 编号：自增，删了不补洞")
-    import store
+    import gallery
 
     for path in tmp.iterdir():
         path.unlink()
 
     for _ in range(3):
-        store.save_photo(jpeg_bytes((400, 400)))
-    names = [p["name"] for p in store.list_photos()["photos"]]
+        gallery.save_photo(jpeg_bytes((400, 400)))
+    names = [p["name"] for p in gallery.list_photos()["photos"]]
     check("三张的编号是 1 2 3", names == ["1.jpg", "2.jpg", "3.jpg"], str(names))
 
-    store.delete_photo("1.jpg")
-    saved = store.save_photo(jpeg_bytes((400, 400)))
+    gallery.delete_photo("1.jpg")
+    saved = gallery.save_photo(jpeg_bytes((400, 400)))
     check("删掉 1.jpg 之后新图是 4.jpg（不是 1.jpg）", saved["name"] == "4.jpg", saved["name"])
 
-    names = [p["name"] for p in store.list_photos()["photos"]]
+    names = [p["name"] for p in gallery.list_photos()["photos"]]
     check("剩下的顺序是 2 3 4", names == ["2.jpg", "3.jpg", "4.jpg"], str(names))
 
 
@@ -117,37 +117,37 @@ def test_next_index(tmp: Path) -> None:
 
 def test_square(tmp: Path) -> None:
     print("\n[3] 存图：横的竖的都得变成方的")
-    import store
+    import gallery
 
     for path in tmp.iterdir():
         path.unlink()
 
-    saved = store.save_photo(jpeg_bytes((1200, 800)))
+    saved = gallery.save_photo(jpeg_bytes((1200, 800)))
     with Image.open(tmp / saved["name"]) as image:
         check("4:3 横图 -> 800 x 800", image.size == (800, 800), str(image.size))
         check("输出是 RGB", image.mode == "RGB", image.mode)
 
-    saved = store.save_photo(jpeg_bytes((800, 1200)))
+    saved = gallery.save_photo(jpeg_bytes((800, 1200)))
     with Image.open(tmp / saved["name"]) as image:
         check("3:4 竖图 -> 800 x 800", image.size == (800, 800), str(image.size))
 
-    saved = store.save_photo(jpeg_bytes((2400, 3000)))
+    saved = gallery.save_photo(jpeg_bytes((2400, 3000)))
     with Image.open(tmp / saved["name"]) as image:
         check("超限的缩到 1600 x 1600", image.size == (1600, 1600), str(image.size))
 
-    saved = store.save_photo(jpeg_bytes((300, 300)))
+    saved = gallery.save_photo(jpeg_bytes((300, 300)))
     with Image.open(tmp / saved["name"]) as image:
         check("小图不放大（只缩不放）", image.size == (300, 300), str(image.size))
 
-    saved = store.save_photo(jpeg_bytes((400, 400)))
+    saved = gallery.save_photo(jpeg_bytes((400, 400)))
     check("文件名就是编号 + .jpg", saved["name"] == "5.jpg", saved["name"])
 
 
 def test_alpha(tmp: Path) -> None:
     print("\n[4] 带透明的 PNG：垫白底，不能变黑块")
-    import store
+    import gallery
 
-    saved = store.save_photo(png_bytes((600, 600)))
+    saved = gallery.save_photo(png_bytes((600, 600)))
     with Image.open(tmp / saved["name"]) as image:
         corner = image.getpixel((5, 5))
         check("透明区被垫成白色", min(corner) > 230, str(corner))
@@ -155,7 +155,7 @@ def test_alpha(tmp: Path) -> None:
 
 def test_exif(tmp: Path) -> None:
     print("\n[5] EXIF 摆正：竖拍的照片不能裁偏")
-    import store
+    import gallery
 
     # 1000x400 的横图，中间三分之一是黑的（x 150~350）。
     # EXIF 说「转 90°」，摆正后它变成 400x1000，那条黑带跟着转成**横的**。
@@ -168,7 +168,7 @@ def test_exif(tmp: Path) -> None:
     buffer = io.BytesIO()
     image.save(buffer, "JPEG", exif=exif.tobytes())
 
-    saved = store.save_photo(buffer.getvalue())
+    saved = gallery.save_photo(buffer.getvalue())
     with Image.open(tmp / saved["name"]) as result:
         size = result.size
         left = result.getpixel((5, 200))
@@ -189,26 +189,26 @@ def test_exif(tmp: Path) -> None:
 
 def test_delete(tmp: Path) -> None:
     print("\n[6] 删除：挡住路径穿越")
-    import store
+    import gallery
 
     # 自己造两张 —— 不依赖前一个用例留在目录里的东西
     for path in tmp.iterdir():
         path.unlink()
     for _ in range(2):
-        store.save_photo(jpeg_bytes((400, 400)))
+        gallery.save_photo(jpeg_bytes((400, 400)))
 
-    target = store.list_photos()["photos"][0]["name"]
-    store.delete_photo(target)
-    check("删掉了", store.list_photos()["count"] == 1, str(store.list_photos()["count"]))
+    target = gallery.list_photos()["photos"][0]["name"]
+    gallery.delete_photo(target)
+    check("删掉了", gallery.list_photos()["count"] == 1, str(gallery.list_photos()["count"]))
 
     try:
-        store.delete_photo("../../pyproject.toml")
+        gallery.delete_photo("../../pyproject.toml")
         check("`../` 要被拒绝", False, "居然通过了")
     except ValueError:
         check("`../` 要被拒绝", True)
 
     try:
-        store.delete_photo("根本没有这张.jpg")
+        gallery.delete_photo("根本没有这张.jpg")
         check("不存在的文件要报 FileNotFoundError", False, "居然通过了")
     except FileNotFoundError:
         check("不存在的文件要报 FileNotFoundError", True)

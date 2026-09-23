@@ -7,16 +7,21 @@
  *   **外加极少数「不放就说不清」的实拍**（`video`，到目前全站只有一处）。
  *   色块偏移是站上的手绘语言，读数的地方用不上。
  * - **圆角不在此列。** 早先这一页连圆角一起禁了，但禁掉的是「装饰的圆角」
- *   （卡片、相框），**会按下去的东西不该被连坐** —— 留言区的按钮跟着站上那组
+ *   （卡片、相框），**会按下去的东西不该被连坐** —— 留言页那个按钮跟着站上那组
  *   手绘圆角走，它让「这能点」一眼可读，比一条直角细线管用。
  * - 外框走 `.shell`（= --page-w，和其他页、导航同一条左右边界），
  *   里面的正文再收一道 `max-w-prose`（44em）—— 舒服的阅读行宽不跟着外框变宽。
  *
- * 内容顺序：时间/角色 → 标题 → 关键字 → 引言 → 分节正文 → 结果 → 留言 → 回列表。
+ * 内容顺序：时间/角色 → 标题 → 关键字 → 引言 → 分节正文 → 结果 → 回列表。
  * **出口只有一个，在页面最下方**（`做过的东西`）。原来顶部还有一个同名口子、
  * 底部另有一组「上一件 / 下一件」，2026-09-20 都撤了：读完一页该做的事是
  * 决定去哪儿，而不是在同一条路上一直往下走。`data/projects.ts` 的
  * `projectNeighbours` 因此暂时没有落点（函数留着）。
+ *
+ * 留言区 2026-09-23 搬走了：原来接在这里（`ProjectGuestbook`，按 slug 取），
+ * 现在独立成一页 `/guestbook`（见 views/GuestbookView.vue）—— 一条
+ * 「网站做得不错」并不属于某个项目，分着看等于把一面墙切成两半。
+ * 这一页因此**不再发任何请求**，正文就是全部。
  *
  * 一小节（block）由几样可选的东西拼出来：分类小字（`kicker`）、引子、正文、
  * 现场画面（`video`）、这一节自己的数字（`stats`）、一串并列的短句（`points`）、
@@ -32,7 +37,6 @@
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { RiArrowLeftSLine } from '@remixicon/vue'
-import ProjectGuestbook from '@/components/ProjectGuestbook.vue'
 import { findProject } from '@/data/projects'
 
 const route = useRoute()
@@ -41,7 +45,7 @@ const route = useRoute()
  * 用 computed 而不是取一次：路由切到另一个 slug 时组件不重建。
  *
  * 正文是**同步**的 —— 它就在 `data/projects.ts` 里，不依赖任何接口。
- * 这一页唯一会发请求的是留言区（`ProjectGuestbook`）。
+ * 这一页也**不发任何请求**（留言 2026-09-23 搬到独立一页去了）。
  */
 const project = computed(() => findProject(String(route.params.slug)))
 
@@ -205,13 +209,6 @@ function ordinal(index: number): string {
 
         <p v-if="project.metricsNote" class="detail__aside">{{ project.metricsNote }}</p>
       </section>
-
-      <!--
-        点赞与留言。**排在「回列表」之前**：它是这一页内容的结尾，
-        而「回列表」是离开这一页的口子 —— 先读完，再决定去哪儿。
-        宽度跟正文一样收到 max-w-prose：输入框铺满整个外框会太长。
-      -->
-      <ProjectGuestbook v-if="project" :slug="project.slug" class="max-w-prose" />
 
       <!--
         这一页唯一的出口，**在页面最下方**。

@@ -4,9 +4,12 @@ FastAPI 后端。前端在 `../frontend/`。
 
 两件事：
 
-1. **影像页的照片管理页** —— 加图、裁成正方形、删除（`store.py`，不进库，顺序=上传先后）；
-2. **项目页的点赞与留言** —— 存在 SQLite 里，由 `/api/projects/{slug}/reactions` 发
-   （`db.py` + `reactions.py`）。
+1. **影像页的照片管理页** —— 加图、裁成正方形、删除（`gallery.py`，不进库，顺序=上传先后）；
+2. **留言页的留言** —— 存在 SQLite 里，由 `/api/comments` 收发
+   （`db.py` + `guestbook.py`）。
+
+（**点赞**曾经是第 2 件事的一半：一张累计表、一张认人表、一个 httponly cookie。
+ 2026-09-23 整块下线，旧表启动时 DROP；那段取舍写在 `guestbook.py` 顶部。）
 
 ## 启动
 
@@ -38,13 +41,13 @@ uv run uvicorn main:app --reload --port 8000
 ```
 backend/
 ├── main.py                 FastAPI 实例 + 路由（就这几个接口，没有分层）
-├── store.py                照片库：读写、方形化、编号。文件操作的逻辑都在这
+├── gallery.py                照片库：读写、方形化、编号。文件操作的逻辑都在这
 ├── db.py                   SQLite：连接 + 建表（表结构就写在里面的 SCHEMA）
-├── reactions.py            点赞与留言的读写（**库里只有这个**）
+├── guestbook.py            留言的读写（**库里只有这个**）
 ├── admin/index.html        管理页。单文件、自包含，没有构建步骤也没有前端依赖
 ├── lizao.db                SQLite 文件（**不提交** —— 里面的留言是真实数据，别删）
 ├── scripts/
-│   └── check_store.py      store.py 的自检：uv run python scripts/check_store.py
+│   └── check_gallery.py    gallery.py 的自检：uv run python scripts/check_gallery.py
 ```
 
 ## 接口
@@ -52,17 +55,15 @@ backend/
 | 方法 | 路径 | 作用 |
 |---|---|---|
 | GET | `/` | 管理页 |
-| GET | `/api/projects/{slug}/reactions` | 一个项目的赞数与留言，一次拿完 |
-| POST | `/api/projects/{slug}/likes` | 点赞 +1，返回新的累计数 |
-| POST | `/api/projects/{slug}/comments` | 写一条留言，body `{"name": "...", "body": "..."}` |
-| GET | `/api/comments` | 全部留言（从新到旧）+ 每个项目的赞数与条数，管理页用 |
-| DELETE | `/api/comments/{id}` | 删一条留言 |
+| GET | `/api/comments` | 全部留言，**从旧到新** —— 留言页与管理页共用 |
+| POST | `/api/comments` | 写一条留言，body `{"name": "...", "body": "..."}` |
+| DELETE | `/api/comments/{id}` | 删一条留言（管理页用） |
 | GET | `/api/photos` | 当前照片，**按影像页实际会显示的顺序**（= 上传先后，不可调） |
 | POST | `/api/photos` | 存一张（multipart 的 `file`），一律裁成正方形，编号接在最大值后面 |
 | DELETE | `/api/photos/{name}` | 删一张 |
 | GET | `/media/photos/{name}` | 照片本体（管理页的缩略图用它） |
 
-⚠️ **两个写接口（上传 / 删除）返回的都是完整清单**（`store.list_photos()`），
+⚠️ **两个写接口（上传 / 删除）返回的都是完整清单**（`gallery.list_photos()`），
 不是「刚操作的那一张」。管理页拿它就是一整份 `state.photos`，重画整个网格。
 上传曾经只回单张，页面读 `data.photos` 得到 `undefined`，
 于是「文件存进去了但页面报保存失败」—— 别再让它们不一致。
@@ -72,14 +73,19 @@ backend/
 两边都按这个编号排。多存一份「顺序表」迟早会和文件名对不上
 （旧版 `PUT /api/photos/order` 就是干这个的，已删）。
 
-## 点赞与留言：SQLite
+## 留言：SQLite
 
-**库里只有这两样东西**，两张表（结构写在 `db.py` 的 SCHEMA 里）：
+**库里只有这一样东西**，一张表（结构写在 `db.py` 的 SCHEMA 里）：
 
 ```
-project_like     slug → 一个累计数
-project_comment  slug → 很多条留言
+comment   一条留言一行：id / name / body / created_at
 ```
+
+### 它不按项目分
+
+曾经叫 `project_comment`、用 `slug` 指向一个项目 —— 那是「留言区塞在项目详情页
+底下」留下的形状。留言独立成一页（屋内那叠书点开的 `/guestbook`）之后就没意义了：
+一条「网站做得不错」并不属于某个项目。
 
 ### 项目正文**不在这里**
 
@@ -88,37 +94,29 @@ project_comment  slug → 很多条留言
 它表达的是**版式意图**）。把它拆成五张表、或整块塞进一个 JSON 列，都只是多一份
 要维护的状态，什么也没换来。
 
-会增长、要持久化的东西才进库 —— 赞会往上加、留言是别人写的。这段取舍写在
+会增长、要持久化的东西才进库 —— 留言是别人写的。这段取舍写在
 `frontend/src/data/projects.ts` 的头部注释里。
 
-**因此不建 `project` 表**：slug 的权威来源是前端那份数据文件，后端再抄一份名单，
-等于加一个项目要改两个地方，两处迟早对不上。所以留言与点赞只存 slug 字符串，
-写入时校验**格式**（`SLUG_RE`，`[a-z0-9-]`），不校验存在性 ——
-前端的路由守卫已经保证只有真实的 slug 进得来。
+**因此也不建 `project` 表**：正文不在库里，留言也不再指向项目，两边没有接缝了。
 
-### 防重复与防垃圾
+### 防垃圾
 
-- **点赞**（2026-09-20 改过）：后端给每个浏览器发一个**随机 id**，放在
-  cookie `lizao_liker` 里（httponly，一年，站点是 http 所以不带 `secure`）。
-  点赞时把它记进 `project_liker(slug, liker)`，主键就是去重 ——
-  **同一个人再点不再加分**。`GET /reactions` 顺带回 `liked`，
-  前端据此把那颗心画成实心砖红（`--heart`）。
-
-  认的是**设备/浏览器**，不是人：换浏览器、清 cookie 就是另一个人，能再点一次。
-  没有登录，也不存 IP / UA —— 能指向真人的东西不进库。对个人站来说这个强度
-  是对的：赞表达的是「有几个人路过觉得不错」，不是一个要拿去对账的数字。
-
-  前端的 localStorage（键 `lizao:liked:<slug>`）没删，但降级成了**本地兜底**：
-  cookie 被禁时后端每次都认不出人，有它至少同一个浏览器还记着。
 - **留言**：只做三件无需状态的检查 —— 长度（昵称 24 / 正文 500）、非空、
-  以及「同一项目下 10 秒内**同样内容**的重复提交」会被挡掉（多半是双击）。
+  以及「10 秒内**同样内容**的重复提交」会被挡掉（多半是双击）。
   **不做内容审核**：留言直接上墙，不合适的由管理页删掉。
+- **没有点赞了。** 那个功能为了「一个人只算一次」养了一整套东西（cookie、
+  随机 id、认人表、前端 localStorage），换来一个没人对账的数字。要恢复它，
+  去 `git log -S project_liker` 看当时的实现与取舍。
 
 ### 没有 ORM，也没有迁移
 
 只用了标准库 `sqlite3`。**没有迁移机制**：表结构变了就重建。
 ⚠️ `lizao.db` **不提交**（`.gitignore` 里 `*.db`），但里面的留言是真实数据 ——
 要清空就删文件，别顺手把它当缓存删了。
+
+唯一的例外是 `db.init_db()` 里那几行 `DROP TABLE IF EXISTS`：它们清掉的是
+**已经不存在的功能**留下的三张旧表（见 `LEGACY_TABLES`）。**那一小段是一向的、
+不可逆的**，写成 `IF EXISTS` 所以反复启动是空转。
 
 ## 顺序是怎么定的
 
@@ -147,13 +145,13 @@ project_comment  slug → 很多条留言
 - 长边上限 **1600**、质量 **85**，**只缩不放**（放大只会变糊还变大）
 - 一律输出 `.jpg`
 
-参数在 `store.py` 顶部。
+参数在 `gallery.py` 顶部。
 
 ## 环境变量
 
 | 变量 | 谁在读 | 说明 |
 |---|---|---|
-| `PHOTOS_DIR` | `store.py` | 覆盖照片目录（`scripts/check_store.py` 用它跑临时目录） |
+| `PHOTOS_DIR` | `gallery.py` | 覆盖照片目录（`scripts/check_gallery.py` 用它跑临时目录） |
 | `DATABASE_URL` | `db.py` | 只认 `sqlite:///...`，相对路径相对 **backend/** 解析。默认 `backend/lizao.db` |
 | `CORS_ORIGINS` | `main.py` | 逗号分隔。不配就只允许 `localhost:5173`。走 vite 代理时用不上（同源） |
 | `DIST_DIR` | `main.py` | 构建好的前端（`dist`）位置。默认仓库根的 `dist/`；它存在才接管 `/` 与 SPA 回退 |
@@ -162,11 +160,11 @@ project_comment  slug → 很多条留言
 
 本文件早先规划过 `app/models/ + database.py + media/` 那一套分层。**仍然没有引入**：
 
-- SQLite 接进来了，但**是平的** —— `db.py`（连接 + 建表）+ `reactions.py`（读写），
+- SQLite 接进来了，但**是平的** —— `db.py`（连接 + 建表）+ `guestbook.py`（读写），
   两个文件放在 backend 根下，没有 `app/` 包、没有 models / schemas / crud 这些层。
   查询就那么几种，分层只会让改一个字段要动三个地方。
-- **没有 Pydantic 的响应模型** —— 返回的就是 `store.py` / `reactions.py` 里那个 dict，
-  管理页和前端直接读。前端那边有 `types/reaction.ts` 守着形状，中间再插一层
+- **没有 Pydantic 的响应模型** —— 返回的就是 `gallery.py` / `guestbook.py` 里那个 dict，
+  管理页和前端直接读。前端那边有 `types/guestbook.ts` 守着形状，中间再插一层
   schema 是重复劳动。唯一的入参模型是 `CommentPayload`（留言），因为要校验。
 - **照片仍然不进库**（理由见开头那段引用）。
 - **项目正文曾经进过库**，后来又搬回前端了 —— 要考古去 `git log`。

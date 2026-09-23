@@ -112,16 +112,12 @@
   /* ---------- 留言 ---------- */
 
   /*
-   * 项目页的留言。**和照片那套格子不是一回事**：一条一行、只有一条淡痕
-   * 分隔，不留缩略图 —— 留言是要读的字，不是要摆的格子。
+   * 留言。**和照片那套格子不是一回事**：一条一行、只有一条淡痕分隔，
+   * 不留缩略图 —— 留言是要读的字，不是要摆的格子。
+   *
+   * 曾经上面还有一排「每个项目各几条」的标签（.byproj），随留言不再按项目分
+   * 一起删了：现在只有一池，一行数字没地方摆。
    */
-  .byproj { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
-  .byproj span {
-    padding: .2rem .6rem; background: var(--surface); border: 1px solid var(--line-soft);
-    border-radius: 5px; font-size: .72rem; color: var(--ink-soft);
-  }
-  .byproj b { font-weight: 500; color: var(--ink); }
-
   .cmts { list-style: none; margin: 1.25rem 0 0; padding: 0; }
   .cmt { padding: .9rem 0; border-top: 1px solid var(--line-soft); }
   .cmt:first-child { border-top: 0; padding-top: 0; }
@@ -193,8 +189,7 @@
       <h2>留言</h2>
       <span class="section__count" id="cmtCount"></span>
     </div>
-    <p class="head__sub">项目页的留言直接上墙，不审核 —— 不合适的在这里删掉。</p>
-    <div class="byproj" id="byProject"></div>
+    <p class="head__sub">留言页的留言直接上墙，不审核 —— 不合适的在这里删掉。</p>
     <ul class="cmts" id="cmts"></ul>
     <p class="empty" id="cmtEmpty" hidden>还没有留言。</p>
   </section>
@@ -384,7 +379,7 @@ async function upload(file) {
 }
 
 /* ------------------------------------------------------------------ *
- * 留言（项目页那个留言区。照片与留言是两件事，各读各的接口）
+ * 留言（留言页那个留言区。照片与留言是两件事，各读各的接口）
  * ------------------------------------------------------------------ */
 
 async function loadComments() {
@@ -398,19 +393,21 @@ async function loadComments() {
 }
 
 function renderComments(data) {
-  const bySlug = data.bySlug || {};
+  /*
+   * 接口给的是**从旧到新**（留言页要的读序）；这一页从新到旧，
+   * 最近的多半才是要处理的那条 —— 所以在这里倒一下。
+   * 顺序只有一个出口（后端那条 ORDER BY），这里只是换个方向看。
+   */
+  const items = (data.items || []).slice().reverse();
 
-  $('cmtCount').textContent = data.items.length ? data.items.length + ' 条' : '';
-  $('byProject').innerHTML = Object.keys(bySlug).map((slug) =>
-    '<span><b>' + esc(slug) + '</b> · ' + bySlug[slug].comments + ' 条 · ' + bySlug[slug].likes + ' 赞</span>'
-  ).join('');
-  $('cmtEmpty').hidden = data.items.length > 0;
+  $('cmtCount').textContent = items.length ? items.length + ' 条' : '';
+  $('cmtEmpty').hidden = items.length > 0;
 
-  $('cmts').innerHTML = data.items.map((c) =>
+  $('cmts').innerHTML = items.map((c) =>
     '<li class="cmt">' +
       '<div class="cmt__top">' +
-        '<span class="cmt__meta"><b>' + esc(c.name) + '</b> · ' + esc(c.slug) +
-        ' · ' + esc(stamp(c.createdAt)) + '</span>' +
+        '<span class="cmt__meta"><b>' + esc(c.name) + '</b> · ' +
+          esc(stamp(c.createdAt)) + '</span>' +
         '<button class="cmt__del" data-id="' + c.id + '">删除</button>' +
       '</div>' +
       '<p class="cmt__body">' + esc(c.body) + '</p>' +

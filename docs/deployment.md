@@ -26,7 +26,7 @@
 
 浏览器 → `:8000` → **FastAPI 一个程序包办三件事**：
 1. 托管前端静态站点（`dist/`）
-2. 处理 `/api`（点赞、留言、照片清单）
+2. 处理 `/api`（留言、照片清单）
 3. 发照片文件（`/media/photos`）
 4. 管理页 `/admin`
 
@@ -44,10 +44,10 @@
 │   └── assets/                # 打包后的 JS / CSS / 字体 / 背景图（URL 里的 /assets/*）
 ├── backend/
 │   ├── main.py                # FastAPI 入口：托管 dist + /api + /media + /admin
-│   ├── store.py               # 照片库目录逻辑（photos_dir()）
+│   ├── gallery.py               # 照片库目录逻辑（photos_dir()）
 │   ├── db.py                  # SQLite 连接与建表
-│   ├── reactions.py           # 点赞 / 留言逻辑
-│   └── lizao.db               # ★ 点赞数 + 留言的数据库文件（持久！）
+│   ├── guestbook.py           # 留言逻辑
+│   └── lizao.db               # ★ 留言的数据库文件（持久！）
 └── data/
     └── photos/                # ★ 照片库（后台上传的图实时写这里，持久！）
 ```
@@ -80,16 +80,15 @@
 - `POST /api/photos` —— 上传一张照片（后台管理页用，`multipart/form-data` 字段 `file`）
 - `DELETE /api/photos/{文件名}` —— 删除某张照片
 
-**项目点赞与留言**（按 `slug` 区分）
-- `GET  /api/projects/{slug}/reactions` —— 取某项目赞数 + 留言列表
-- `POST /api/projects/{slug}/likes` —— 点赞 +1
-- `POST /api/projects/{slug}/comments` —— 写一条留言
+**留言**（站点级的一池，2026-09-23 起不再按项目分；点赞已整个下线）
+- `GET  /api/comments` —— 列出全部留言，**从旧到新**（留言页与管理页共用）
+- `POST /api/comments` —— 写一条留言
 
 **留言管理**
 - `GET  /api/comments` —— 列出全部留言（管理页用）
 - `DELETE /api/comments/{id}` —— 删除某条留言
 
-> 四个写接口（上传 / order / normalize / delete）一律回**完整清单** `store.list_photos()`，管理页拿它重画网格。
+> 四个写接口（上传 / order / normalize / delete）一律回**完整清单** `gallery.list_photos()`，管理页拿它重画网格。
 
 ---
 
@@ -126,10 +125,9 @@ id=1  slug=traffic-analyzer  name=李枣  body=111  created_at=2026-09-19T08:21:
 ```
 
 **设计要点**
-- **没有 `project` 表**：slug 只存字符串，写入时校验格式（`SLUG_RE`）防注入，不校验「项目存不存在」。slug 权威名单在前端，后端再存一份等于双份维护易对不上。
-- **点赞认「浏览器」不认人**（2026-09-20 起）：`project_like` 仍只存累计数，另有一张 `project_liker(slug, liker, created_at)`（主键 `(slug, liker)` 即去重）记谁点过。身份是后端发的随机 id cookie `lizao_liker`（httponly，一年）；`GET /reactions` 回 `liked`，前端据此把心画成实心砖红。换浏览器/清 cookie 就是另一个人，可再点一次。前端 localStorage 仍是本地兜底（cookie 被禁时）。
-   - 部署提醒：cookie 不带 `secure`（站点是 http）。上了 HTTPS 后打开 `main.py` 里那行 `secure=True`（有注释标着）。
-- **有条索引但不强制外键**：`idx_comment_slug ON project_comment(slug, created_at)` 加速「取某项目留言并排序」；没建外键。
+- **留言不指向项目**（2026-09-23 起）：表叫 `comment`，没有 `slug` 列。原来那个外键是「留言区塞在项目详情页底下」留下的形状，留言独立成 `/guestbook` 一页之后就没意义了。
+- **点赞已下线**（同日）：`project_like` / `project_liker` 两张表连同一整套 cookie 认人机制（`lizao_liker`）一起删了，旧表由 `db.init_db()` 的 `LEGACY_TABLES` 在启动时 DROP。要恢复去 `git log -S project_liker` 考古。
+- **有条索引但不强制外键**：`idx_comment_created ON comment(created_at)` 加速「按时间读」；没建外键。
 - **位置可改**：环境变量 `DATABASE_URL=sqlite:////绝对路径/lizao.db` 可把库挪到别处。
 
 ---
@@ -175,7 +173,7 @@ id=1  slug=traffic-analyzer  name=李枣  body=111  created_at=2026-09-19T08:21:
 
 - **`/admin` 公网裸奔**：任何知道 IP 的人都能进、能删留言/照片。别传私密的；备案上 nginx 时给 `/admin` 加 Basic Auth 或限制访问。
 - **`/docs` 公网可读**：把全部接口（含删除类）玩法摊在公网。上线前收口。
-- **`PHOTOS_DIR` 默认值已写死**为 `/srv/lizao/data/photos`（`store.py`），不依赖 systemd 配置，重装服务不会静默分裂照片库。
+- **`PHOTOS_DIR` 默认值已写死**为 `/srv/lizao/data/photos`（`gallery.py`），不依赖 systemd 配置，重装服务不会静默分裂照片库。
 
 ---
 
@@ -198,7 +196,7 @@ id=1  slug=traffic-analyzer  name=李枣  body=111  created_at=2026-09-19T08:21:
 ## 9. 备份提醒
 
 迁移、重装整机、做云快照时，务必带走这两个持久文件：
-- `/srv/lizao/backend/lizao.db`（点赞 + 留言）
+- `/srv/lizao/backend/lizao.db`（留言）
 - `/srv/lizao/data/photos/`（全部照片）
 
 重新部署 `dist` 不影响它们，但重做整机就不在了。

@@ -22,16 +22,17 @@ const DEFAULT_DESCRIPTION =
  *   /projects            做过的东西。屋里那台电脑的去向。项目清单。
  *   /projects/:slug      一个项目的详情。极简单栏，见 views/ProjectView.vue。
  *   /gallery             影像。屋里那台相机的去向。照片墙。
+ *   /guestbook           留言。屋里那叠横放的书的去向。站点级的一池。
  *
- * 五个地址**每一页都有内容** —— 「只有两个场景页有内容」是 2026-09 清空期的
+ * 六个地址**每一页都有内容** —— 「只有两个场景页有内容」是 2026-09 清空期的
  * 旧状态。项目页与影像页还挂着「这一页还在造」那句按语（有意留的未完工记号），
  * 但别再把任何一页叫「空页 / 空壳」。
  *
  * /notes 连地址一起废除了（内容清空过、后来干脆删掉）：屋里那叠竖排书
  * 现在是纯装饰。正文渲染器 utils/markdown.ts 与 markdown-it 依赖同时删掉，
  * 项目正文因此一直是结构化数据，就写在 `data/projects.ts` 里 ——
- * **它不进数据库**（排版不是记录）。进库的是挂在它上面的点赞与留言，
- * 由详情页底部的 `ProjectGuestbook` 去取。
+ * **它不进数据库**（排版不是记录）。进库的是留言，它**不挂在项目上**
+ * （以前按 slug 分，见 backend/guestbook.py 顶部），由 views/GuestbookView.vue 读。
  *
  * /about 也删掉了：屋里那一页承担了它的位置，计算机热点改指向
  * /projects（做过的东西）。
@@ -89,6 +90,16 @@ const routes: RouteRecordRaw[] = [
     name: 'gallery',
     component: () => import('@/views/GalleryView.vue'),
     meta: { title: SITE_NAME, description: '我的照片与朋友的照片。' },
+  },
+  {
+    // 屋里那叠横放的书的去向。
+    path: '/guestbook',
+    name: 'guestbook',
+    component: () => import('@/views/GuestbookView.vue'),
+    meta: {
+      title: SITE_NAME,
+      description: '留言：路过的人写下的几句话。',
+    },
   },
   {
     path: '/:pathMatch(.*)*',

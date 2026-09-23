@@ -1,5 +1,5 @@
 """
-FastAPI 后端。两件事：**影像页的照片管理页**、**项目页的点赞与留言**。
+FastAPI 后端。两件事：**影像页的照片管理页**、**留言页的留言**。
 
 启动：
 
@@ -11,32 +11,33 @@ FastAPI 后端。两件事：**影像页的照片管理页**、**项目页的点
 
 ## 它管什么
 
-- **照片**（`store.py`）：上传的图裁成正方形、压到 MAX_SIDE、存进 `data/photos/`
+- **照片**（`gallery.py`）：上传的图裁成正方形、压到 MAX_SIDE、存进 `data/photos/`
   （运行时由上面的 mount 直接发出去，传完刷新影像页就能看到，不用重新构建）。
   **只有三个接口：列、传、删。** 顺序不可调 —— 它就是上传的先后，
-  编码在文件名的编号前缀里（见 store.py 顶部）。
-- **点赞与留言**（`reactions.py` + `db.py`）：**进 SQLite**，这是库里唯一的内容。
-  它们按 slug 挂在项目上，一个 slug 一行累计数 + 很多条留言。
+  编码在文件名的编号前缀里（见 gallery.py 顶部）。
+- **留言**（`guestbook.py` + `db.py`）：**进 SQLite**，这是库里唯一的内容。
+  站点级的一池，不按项目分。
 
+（点赞曾经也在这里 —— 一张累计表、一张认人表、一个 httponly cookie。
+ 2026-09-23 整块下线，旧表在 `db.init_db()` 里 DROP 掉；那段取舍写在
+ `guestbook.py` 顶部。）
 """
 
 from __future__ import annotations
 
 import os
-import re
 from contextlib import asynccontextmanager
 from pathlib import Path
-from uuid import uuid4
 
-from fastapi import FastAPI, File, HTTPException, Request, Response, UploadFile
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 import db
-import reactions as repo
-import store
+import gallery
+import guestbook as repo
 
 ADMIN_PAGE = Path(__file__).resolve().parent / "admin" / "index.html"
 
@@ -60,7 +61,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="lizao-site 后台",
-    description="影像页的照片管理，以及项目页的点赞与留言（SQLite）。",
+    description="影像页的照片管理，以及留言页的留言（SQLite）。",
     lifespan=lifespan,
 )
 
@@ -74,7 +75,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/media/photos", StaticFiles(directory=ensure_dir(store.photos_dir())), name="photos")
+app.mount("/media/photos", StaticFiles(directory=ensure_dir(gallery.photos_dir())), name="photos")
 
 
 class CommentPayload(BaseModel):
@@ -84,43 +85,6 @@ class CommentPayload(BaseModel):
     body: str
 
 
-# ---------- 点赞的人是谁 ----------
-#
-# 没有登录，所以认的是**这个浏览器**：一个随机 id，放在 cookie 里。
-# 不是账号、不存 IP、不存 UA —— 能指向真人的东西不进库（见 reactions.py 顶部）。
-# 换浏览器 / 清 cookie 就是另一个人，能再点一次，这是有意的。
-LIKER_COOKIE = "lizao_liker"
-LIKER_MAX_AGE = 60 * 60 * 24 * 365  # 一年
-
-# uuid4().hex 的形状。cookie 是客户端能改的东西，只认这个格式，别的当没有。
-LIKER_RE = re.compile(r"^[0-9a-f]{32}$")
-
-
-def liker_id(request: Request, response: Response) -> str:
-    """
-    读这次请求的点赞人 id；没有（或者格式不对）就现发一个，写进响应。
-
-    所以**第一次进详情页就已经有身份了** —— 不用等他点赞。
-    """
-    existing = (request.cookies.get(LIKER_COOKIE) or "").strip().lower()
-    if LIKER_RE.match(existing):
-        return existing
-
-    fresh = uuid4().hex
-    response.set_cookie(
-        LIKER_COOKIE,
-        fresh,
-        max_age=LIKER_MAX_AGE,
-        path="/",
-        httponly=True,  # 前端不需要读它 —— 「我点过没有」由接口回的 liked 说了算
-        samesite="lax",
-        # 站点现在是 http（没有 TLS），不能加 secure，否则 cookie 根本存不下来；
-        # 哪天上了 HTTPS 再打开这一行。
-        # secure=True,
-    )
-    return fresh
-
-
 # 管理页：本地 dev 在 `/` 与 `/admin` 都能进；生产由下面的 SPA 块接管 `/`，
 # 管理页只留在 `/admin`（带删除接口，不该和公开站点抢根路径）。
 @app.get("/admin", include_in_schema=False)
@@ -128,55 +92,27 @@ def admin_page() -> FileResponse:
     return FileResponse(ADMIN_PAGE, media_type="text/html")
 
 
-# ---------- 点赞与留言 ----------
+# ---------- 留言 ----------
 
 
-@app.get("/api/projects/{slug}/reactions")
-def get_reactions(slug: str, request: Request, response: Response) -> dict:
+@app.get("/api/comments")
+def list_comments() -> dict:
     """
-    一个项目的点赞数与留言。**详情页一次请求就够**，所以合成一个返回值：
+    全部留言，**从旧到新**（读的顺序就是对话的顺序）。留言页与管理页共用这一个。
 
-        { "slug": "...", "likes": 3, "liked": false, "comments": [ ... ] }
-
-    `liked` 是「**你**点过没有」（按 cookie 里那个 id 查 `project_liker`），
-    前端拿它决定那颗心画不画成红色。留言按时间从旧到新 ——
-    读的顺序就是对话的顺序。
+    管理页要的是反过来 —— 它自己在渲染时倒一下，**不在这里加第二个参数**：
+    顺序只有一个出口。
     """
-    if not repo.is_valid_slug(slug):
-        raise HTTPException(status_code=404, detail="没有这个项目")
-    liker = liker_id(request, response)
     conn = db.connect()
     try:
-        return repo.get_reactions(conn, slug, liker)
+        return {"items": repo.list_comments(conn)}
     finally:
         conn.close()
 
 
-@app.post("/api/projects/{slug}/likes")
-def post_like(slug: str, request: Request, response: Response) -> dict:
-    """
-    点赞 +1，返回 `{ likes, liked }`。
-
-    **同一个人只算一次**：认的是 cookie 里那个 id，重复提交不再加分
-    （`project_liker` 的主键就是 `(slug, liker)`），但依然回 `liked: true` ——
-    前端要把心画成红的。为什么这么选，写在 `reactions.py` 顶部。
-    """
-    if not repo.is_valid_slug(slug):
-        raise HTTPException(status_code=404, detail="没有这个项目")
-    liker = liker_id(request, response)
-    conn = db.connect()
-    try:
-        return {"slug": slug, "likes": repo.add_like(conn, slug, liker), "liked": True}
-    finally:
-        conn.close()
-
-
-@app.post("/api/projects/{slug}/comments", status_code=201)
-def post_comment(slug: str, payload: CommentPayload) -> dict:
+@app.post("/api/comments", status_code=201)
+def post_comment(payload: CommentPayload) -> dict:
     """写一条留言。**直接上墙**，不审核 —— 不合适的由管理页删掉。"""
-    if not repo.is_valid_slug(slug):
-        raise HTTPException(status_code=404, detail="没有这个项目")
-
     name = payload.name.strip()
     body = payload.body.strip()
     if not name or not body:
@@ -184,23 +120,7 @@ def post_comment(slug: str, payload: CommentPayload) -> dict:
 
     conn = db.connect()
     try:
-        return repo.add_comment(conn, slug, name, body)
-    finally:
-        conn.close()
-
-
-# ---------- 留言的管理接口（管理页用） ----------
-
-
-@app.get("/api/comments")
-def list_comments() -> dict:
-    """全部留言，从新到旧，跨项目。管理页用它列出待删的那些。"""
-    conn = db.connect()
-    try:
-        return {
-            "items": repo.all_comments(conn),
-            "bySlug": repo.counts_by_slug(conn),
-        }
+        return repo.add_comment(conn, name, body)
     finally:
         conn.close()
 
@@ -222,7 +142,7 @@ def remove_comment(comment_id: int) -> dict:
 @app.get("/api/photos")
 def get_photos() -> dict:
     """当前照片，按影像页实际会显示的顺序。"""
-    return store.list_photos()
+    return gallery.list_photos()
 
 
 # 在 FastAPI 中，file: UploadFile = File(...) 这个写法其实是由类型提示（Type Hint）、默认参数（Default Value）和参数验证（Validation）三部分组成的。
@@ -254,23 +174,23 @@ async def upload_photo(file: UploadFile = File(...)) -> dict:
     """
     data = await file.read()
     try:
-        store.save_photo(data)
+        gallery.save_photo(data)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"这不是一张能读的图片：{exc}") from exc
-    return store.list_photos()
+    return gallery.list_photos()
 
 
 @app.delete("/api/photos/{name}")
 def delete_photo(name: str) -> dict:
     try:
-        store.delete_photo(name)
+        gallery.delete_photo(name)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail="没有这张照片") from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return store.list_photos()
+    return gallery.list_photos()
 
 
 # ---------- 生产托管：构建好的前端（dist） ----------
