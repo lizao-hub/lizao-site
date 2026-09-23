@@ -22,7 +22,7 @@ function asset(path: string): string {
  *
  * 所有百分比都是**相对 2848×1602 参考画布**的，和原稿一致。
  * 这些数字不是估的：它们是用带 alpha 掩膜的 SSD 模板匹配
- * （`.workbuddy/tmp/locate_layers.py`，现在收在 scripts/ 下）
+ * （`frontend/scripts/scene-locate-layers.py`）
  * 从各自的 composite.png 里逐像素算出来的，整体平均像素差 0.13/255。
  *
  * 热点上的 zone（可点区域）同样是算出来的：把物件的 alpha 掩膜膨胀 14px，
@@ -133,6 +133,10 @@ const roomDoors: SceneHotspot[] = [
  * 书要排在电脑之前：三叠书里两叠在视觉上压在电脑下面，
  * 但它们的 zone 已经算过不重叠，所以顺序只影响观感，不影响点击。
  * 书不再是门之后，这一条就纯粹是观感问题了。
+ *
+ * **两张景都完整展示，上下不裁**（曾经给屋里加过上 4% / 下 9% 的裁切，
+ * 把景压成一条更矮的横幅；后来要求与湖边一致，就撤了 —— 机制连数据一起删，
+ * 想看那一版去 `git log -S crop`）。
  */
 export const roomScene: Scene = {
   id: 'room',

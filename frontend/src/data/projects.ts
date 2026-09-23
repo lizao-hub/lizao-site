@@ -27,12 +27,14 @@ export const projects: Project[] = [
     lede: 'RAT-LLM is a retrieval-augmented temporal LLM built for zero-shot soft sensing in multimode industrial processes: retrieve transferable historical dynamics, reprogram them into LLM-compatible temporal representations, and let the model infer quality variables without any target-mode training data.',
     blocks: [
       {
+        kicker: '',
         lead: 'Known modes can look perfect. Then everything breaks.',
         text: 'Industrial processes operate in multiple modes. In the revised ZSSS protocol the model is trained only on known source modes and evaluated on entirely unseen target modes; target segments never enter training or the retrieval candidate set. The challenge is therefore not ordinary forecasting — it is generalization across distribution shift, with no target-mode labels.',
         points: ['Known modes · source domain — HLT pooled R² 0.9454 · PD pooled R² 0.9466.', 'Unknown modes · target domain — the same baseline families collapse: Time-LlaMA falls to R² −22.3839 on HLT Unknown 2, where RAT-LLM holds at +0.3617.'],
         aside: 'The research question: when the operating mode is new, can historical local dynamics act as transferable empirical priors?',
       },
       {
+        kicker: '',
         lead: 'One researcher. One full loop.',
         text: 'This was a solo research project. I handled the pipeline from problem formulation and method design through implementation, baseline adaptation, experiments and visualization to the manuscript itself.',
         stats: [
@@ -68,6 +70,7 @@ export const projects: Project[] = [
         aside: 'Execution details come from the project development record; benchmark metrics are from the revised manuscript.',
       },
       {
+        kicker: '',
         lead: 'Zero-shot means zero leakage.',
         text: 'The revised manuscript makes the evaluation condition explicit: known modes provide labels for training, the source-domain candidate set is unlabeled and used only for retrieval, and unknown modes stay isolated for evaluation.',
         table: {
@@ -82,17 +85,20 @@ export const projects: Project[] = [
         aside: 'Isolation rule: no target segment enters training or the retrieval knowledge base.',
       },
       {
+        kicker: '',
         lead: 'Retrieve. Reprogram. Reason.',
         text: 'RAT-LLM is organized as a three-stage system. The retrieval encoder searches for dynamically relevant history; MTRM turns the query and the retrieved sequences into complementary temporal representations; PEFT adapts a lightweight GPT-2 backbone to fuse those tokens and regress the quality variable.',
         points: ['01 / Retrieval — pointwise and dilated temporal convolutions map the query into a latent dynamic space, where a cosine Top-K picks the history to reuse.', '02 / Representation — MTRM keeps two paths: fine-grained patch tokens preserve the query’s own dynamics, coarse retrieval tokens suppress noisy history.', '03 / Adaptation — a frozen backbone carries the knowledge; LoRA plus trainable positional embeddings and LayerNorm carry the adaptation.', 'Output — the quality variable ŷ is read from the final hidden state.'],
         aside: 'The two paths are separated on purpose: transient local structure and retrieved context are different kinds of evidence, and they entangle badly when forced through one channel.',
       },
       {
+        kicker: '',
         lead: 'The first proof was not the final model.',
         text: 'My earliest successful retrieval version concatenated the query with the retrieved sequences, compressed the time dimension with an MLP, then fed the result to an LLM. It proved the point that mattered: retrieval could move an Unknown Mode R² from negative to positive. Everything after that was built to make the signal cleaner, more structured and more trainable.',
         points: ['Step 01 · Hard retrieval — raw temporal signals compared with Euclidean or cosine nearest-neighbour. Easy to build, and wrong in an instructive way: similarity is not utility.', 'Step 02 · First success — retrieved sequences concatenated along the time axis, MLP-compressed back to the original length, then passed to the LLM. The first run where retrieval pushed an Unknown Mode R² from negative to positive.', 'Step 03 · RAT-LLM — learned retrieval, MTRM separating fine query modelling from coarse historical context, and Similarity–Utility Alignment feeding predictive utility back to the retriever.'],
       },
       {
+        kicker: '',
         lead: 'Find what helps, not just what looks close.',
         text: 'Two candidates can sit at nearly the same distance in embedding space and differ completely in whether they help the predictor. During training each candidate is evaluated in isolation; the resulting predictive utility becomes a pseudo-label distribution, and a KL divergence aligns it with the retriever’s own similarity distribution.',
         table: {
@@ -109,6 +115,7 @@ export const projects: Project[] = [
         aside: 'Training loop: standard forward path → per-candidate forward path → predictive utility distribution → KL alignment → retriever update.',
       },
       {
+        kicker: '',
         lead: 'Pressure-tested on two real processes.',
         text: 'The manuscript evaluates RAT-LLM on real ammonia-synthesis data from the High-Low Transformer (HLT) and Pre-Decarbonization (PD) units. Each case holds one known source regime and two unseen target modes with increasing distribution shift.',
         stats: [
@@ -140,6 +147,7 @@ export const projects: Project[] = [
         aside: 'The unknown modes are where the baselines stop working. RMSE / MAE for the HLT unknown modes: 0.0212 / 0.0157 and 0.0346 / 0.0272.',
       },
       {
+        kicker: '',
         lead: 'Full benchmark · HLT case',
         text: 'Twelve state-of-the-art baselines across LLM, Transformer, CNN and recurrent families, all under the same leakage-free protocol. RAT-LLM is the only one that stays positive once the operating mode is unknown.',
         table: {
@@ -163,6 +171,7 @@ export const projects: Project[] = [
         },
       },
       {
+        kicker: '',
         lead: 'Not a toy benchmark.',
         text: 'Both cases come from ammonia-synthesis process units. HLT predicts outlet residual CO concentration; PD predicts residual CO₂ concentration.',
         points: ['HLT · High-Low Transformer unit — 26 process variables → residual CO. 20,898 train · 5,973 validation · 2,985 known-mode test · ≈15,000 retrieval candidates · 2,000 unknown-mode samples.', 'PD · Pre-Decarbonization unit — 15 process variables → residual CO₂. 8,232 train · 2,352 validation · 1,176 known-mode test · ≈6,600 retrieval candidates.'],
@@ -176,99 +185,178 @@ export const projects: Project[] = [
     period: '2025.2 - 2025.9',
     end: '2025.09',
     role: '核心开发者',
-    keywords: ['YOLO11', 'ByteTrack', '多进程 + 共享内存', 'FastAPI'],
-    summary: '面向公安交管高架场景，基于 YOLO11、ByteTrack 构建无人机交通流实时分析系统，完成高架分割、车辆与车道线跟踪、车速/密度估计、车道级流量统计及拥堵与异常事件识别，并通过 DAG 流水线、多进程与共享内存实现高并发推理，最终以 FastAPI 完成算法服务化。',
-    lede: '基于 YOLO11 的无人机交通流智能分析系统。将高架路面分割、车辆与车道线追踪、像素—物理尺度估计、速度与密度计算组织成一条实时并行推理流水线，并通过 FastAPI 服务化。',
+    keywords: ['YOLO11', 'ByteTrack', '流水线并行', '多进程 + 共享内存', 'FastAPI'],
+    summary:
+      '面向公安交管高架场景，构建基于 YOLO11 与 ByteTrack 的无人机交通流智能分析系统。完成高架区域分割、车辆与车道线跟踪、速度与密度估计及异常事件识别，并针对多阶段视觉任务的串行瓶颈，引入 DAG 任务编排、多进程与共享内存构建流水线并行推理架构，最终通过 FastAPI 完成算法服务化。',
+    lede:
+      '面向公安交管高架场景，将 YOLO11、ByteTrack 与多阶段视觉分析组织成实时并行推理流水线，再通过 FastAPI 提供批处理与实时流式服务。',
     blocks: [
       {
-        lead: 'Aerial video becomes a traffic instrument.',
-        text: '真实运行视频：双向高架被独立分区，系统持续给出车辆检测、数量、密度 与无人机速度等运行信息。',
+        kicker: '真实运行场景',
+        lead: '让无人机成为交通监测工具。',
+        text:
+          '系统直接处理无人机航拍视频，对双向高架道路进行独立区域分析，持续输出车辆检测、交通流量、密度、速度及异常事件等信息。',
         video: {
           src: demoVideo,
           poster: demoPoster,
-          caption: 'Area 1 / Area 2 · detection + tracking overlay',
+          caption: 'Area 1 / Area 2 · 车辆检测与区域分析',
         },
-        points: ['目标场景 — 公安局交通管理支队高架大队 · UAV aerial traffic analysis', '运行环境 — RTX 4080 · i7 · CUDA · PyTorch · FastAPI · Uvicorn', '系统输出 — Flow · Speed · Density，以及车道 / 匝道级统计与事件提醒'],
+        points: [
+          '目标场景 — 公安交管高架道路 · 无人机空中交通分析',
+          '核心能力 — 道路区域分割 · 车辆/车道线检测（并跟踪） · 速度/密度估计 · 异常事件',
+          '系统输出 — 分析视频 · 交通指标 · 事件提醒 · 实时结果流',
+          '技术栈 — Python · PyTorch · YOLO11 · ByteTrack · FastAPI · 多进程 · 共享内存',
+        ],
       },
       {
-        lead: 'The bottleneck was not detection. It was orchestration.',
-        text: '把串行任务拆成独立的 stage，让不同帧在不同 stage 上同时执行；大图像进入共享内存，队列里只传轻量级的 seq 与 result。',
-        stats: [
-          {
-            value: '19.8',
-            unit: 'FPS',
-            label: 'Baseline · single-process serial pipeline',
-          },
-          {
-            value: '74.6',
-            unit: 'FPS',
-            label: 'System throughput · pipeline parallelism',
-          },
-          {
-            value: '3.8',
-            unit: '×',
-            label: 'Throughput uplift · 74.6 ÷ 19.8 ≈ 3.77',
-          },
-          {
-            value: '13.4',
-            unit: 'ms',
-            label: 'Average frame latency · project benchmark',
-          },
-        ],
-        points: ['01 · Video Decode — read / write frame', '02 · Road Segmentation — YOLO11 · Area 1 / 2', '03 · Vehicle Tracking — YOLO11 + ByteTrack', '04 · Lane Tracking — lane geometry', '05 · Pixel → World — scale / coordinate', '06 · Traffic Metrics — speed / density', '07 · Service — REST / WebSocket'],
-      },
-      {
-        lead: 'Four processes. Shared pixels. One ordered result stream.',
-        text: '主进程负责提交、共享内存、调度与 API；S / V / L 三个 worker 进程承担主要视觉计算；P 线程负责按 seq 汇合三路结果并做 CPU 后处理。',
-        stats: [
-          {
-            value: '4',
-            unit: 'processes',
-            label: '主进程 + S / V / L 三个 worker',
-          },
-          {
-            value: '5',
-            unit: 'threads',
-            label: 'worker 内部单线程循环，主进程另有 P 线程',
-          },
-        ],
+        kicker: '性能优化',
+        lead: '从 19.8 FPS 到 74.6 FPS。',
+        text:
+          '真正的瓶颈不在目标检测，而在多阶段任务的串行等待。将处理链拆分成独立阶段后，不同视频帧可以同时处于不同阶段，让整条流水线持续推进。',
         table: {
-          caption: 'Process topology',
-          head: ['Process', 'Role'],
+          caption: '处理方式对照',
+          head: ['处理方式', '吞吐', '说明'],
           rows: [
-            ['MAIN — TrafficAnalyzerMP', 'API · frame I/O · scheduling · shared memory'],
-            ['S / cuda:4 — seg_worker', 'YOLO11 road segmentation · masked / overlay / masks'],
-            ['V / cuda:5 — veh_worker', 'vehicle tracking · mask grouping · result packet'],
-            ['L / cuda:6 — lane_worker', 'lane-line tracking · lane boxes'],
-            ['P / CPU thread — post_loop', 'seq alignment · speed / density / congestion · final emit'],
-            ['OUTPUT — result stream', 'threading.Queue for streaming · dict for batch results'],
+            [
+              '串行',
+              '19.8 FPS',
+              '一帧依次走完分割、车辆跟踪、车道线跟踪与指标计算；前一阶段没有结束，后一阶段无法开始',
+            ],
+            [
+              '流水线并行',
+              '74.6 FPS',
+              '各阶段拆成独立任务持续运行，不同视频帧同时处于不同处理阶段',
+            ],
+          ],
+          highlight: 1,
+        },
+        // aside:
+        //   '性能提升的核心不是单纯更换模型，而是改变任务执行方式：让多个阶段同时处理不同视频帧，从“所有步骤依次等待”变成“多个阶段持续并行推进”。',
+      },
+      {
+        kicker: '系统架构',
+        lead: '多进程 + 共享内存。',
+        text:
+          '主进程负责视频输入输出、任务调度、共享内存与 API；道路分割、车辆跟踪和车道线跟踪分别运行在独立进程中，最终由主进程中的后处理线程完成多路结果汇合。',
+        flow: {
+          caption: '系统处理架构',
+          stages: [
+            {
+              title: '主进程',
+              items: [
+                { name: '视频输入输出'},
+                { name: '任务调度'},
+                { name: 'API'}
+              ],
+            },
+            // {
+            //   title: '共享内存',
+            //   items: [{ name: '共享图像缓冲区'}],
+            // },
+            {
+              title: '三个计算进程',
+              items: [
+                { name: '道路分割'},
+                { name: '车辆跟踪'},
+                { name: '车道线跟踪'},
+              ],
+            },
+            {
+              title: '结果汇合',
+              items: [
+                {
+                  name: '后处理线程',
+                  note: '按帧编号对齐多路结果，计算速度、密度、拥堵与事件状态',
+                },
+              ],
+            },
           ],
         },
-        points: ['FRAME — 大图走共享内存，只有轻量包走 multiprocessing.Queue', 'q_to_s — 主线程 → S：只发 seq，worker 按 seq 自己去共享内存读像素', 'q_s_to_l/v/p — S 分割完成后，把 seq + 轻量元数据扇出给车道、车辆与后处理三路', 'q_l/v_to_p — L / V 把 lane_boxes、veh_pkt 这类小结果送进 P 线程', 'barrier — P 线程等同一 seq 的 S / L / V 三路齐全，再进最终后处理'],
+        points: [
+          '大图像走共享内存 — 避免在多个进程之间反复复制完整图像，任务消息携带帧编号和轻量元数据',
+          '不同视觉阶段独立运行 — 道路分割、车辆跟踪和车道线跟踪分别占用独立计算资源，不再被单一串行流程绑在一起',
+          '结果按照帧编号重新对应 — 多路计算完成后，根据同一视频帧的编号重新汇合，保证最终结果和原始视频顺序一致',
+          // '为什么后处理使用线程 — 后处理需要频繁访问共享内存、结果队列并及时回收资源，留在主进程中可以减少额外的跨进程通信，同时让视频提交、结果回收和 CPU 后处理彼此重叠',
+        ],
       },
       {
-        lead: 'Why P is a thread, not another process.',
-        text: 'P 频繁访问共享内存、queue 和 semaphore；把它留在主进程里，可以省掉额外的 pickle / IPC 与桥接线程。',
-        points: ['01 · Prevent backpressure deadlock — 主线程可能因槽位已满而阻塞，P 线程在后台释放槽位；拆开生产者与消费者之后，系统才能持续推进。', '02 · Overlap I/O + CPU post — 读帧、写共享内存与后处理可以重叠执行，numpy / cv2 的 CPU 工作不必占住 API 的提交流程。', '03 · Zero-copy return path — P 在主进程里能直接读共享内存、写结果队列并释放槽位；独立进程反而多出一趟跨进程结果传递。'],
-      },
-      {
-        lead: 'Turn tracked pixels into traffic states.',
-        text: '统计范围覆盖每个高架实体与每条车道；速度、密度与事件信息共同构成最终的交通状态。',
-        points: ['Detection taxonomy — 系统实际输出 5 类目标：car / truck / bus / motorcycle / person。车辆类型用于计数、车流量与速度统计；motorcycle / person 出现在高架实体内时进入事件提醒。', 'Per-ramp / per-lane statistics — 每个高架实体独立计算，每条车道分别统计：vehicle count · traffic flow · lane flow · speed · density。其中密度 = 实体内车辆像素面积 ÷ 高架实体像素面积，用来和速度一起评估拥堵。', 'Pixel → Physical Scale — 用检测到的小客车像素宽度对齐经验物理宽度（vehicle width(px) ↔ ~2.2 m）建立比例，再把车道线中心的跨帧像素位移用于估计无人机自身的速度。', 'Ground Speed — 车辆帧间像素位移先得到相对无人机的速度，再结合无人机估计速度，并对帧间结果滤波。', 'Event / Congestion Logic — 当前已确定的示例规则：AVG SPEED < 10 · DENSITY > 60 判定为拥堵；motorcycle / person 出现在高架实体内时触发事件提醒。'],
-      },
-      {
-        lead: 'The algorithm leaves the notebook.',
-        text: '通过 FastAPI + Uvicorn 封装成在线服务，同时覆盖批处理与流式推送两条路径。',
-        table: {
-          caption: 'API',
-          head: ['Method', 'Endpoint', '做什么'],
-          rows: [
-            ['POST', '/analyze', '提交分析任务，面向批处理工作流'],
-            ['WS', '/stream', '实时流式推送分析结果'],
-            ['GET', '/result/{task_id}', '获取指定任务的结果'],
+        kicker: 'AI 数据链路',
+        lead: '从模型结果到真正的交通状态。',
+        text:
+          '模型只负责提供分割、检测和跟踪；系统进一步把这些结果转化为车辆速度、密度与事件状态，让 AI 模型输出最终进入业务逻辑。',
+        flow: {
+          caption: 'AI 数据链路',
+          stages: [
+            {
+              title: '视觉感知',
+              items: [
+                { name: 'YOLO11', note: '道路 / 车辆 / 车道线' },
+                { name: 'ByteTrack', note: '跨帧目标轨迹' },
+              ],
+            },
+            {
+              title: '运动计算',
+              items: [
+                { name: '像素 → 物理尺度', note: '车辆宽度 ≈ 2.2 m' },
+                { name: '跨帧位移', note: '车辆 / 车道线' },
+              ],
+            },
+            {
+              title: '交通业务状态',
+              items: [
+                { name: '速度'},
+                { name: '密度'},
+                { name: '事件', note: '拥堵 / 异常目标' },
+              ],
+            },
           ],
         },
-        aside: '运行栈 Python · PyTorch · CUDA · FastAPI · Uvicorn。从单进程串行的 19.8 FPS 到流水线并行后的 74.6 FPS —— 围绕真实的无人机视频，把检测、跟踪、几何与交通指标组织成一套可服务化的实时系统。',
+        points: [
+          // '分区域、分车道统计 — 每个高架实体独立计算，每条车道分别统计 vehicle count · speed · density',
+          '速度估计 — 先利用车道线在连续帧之间的位移，估计无人机相对地面的运动速度；再根据车辆在连续帧之间的像素位移，计算车辆相对无人机的运动速度；最后将两者结合，得到车辆相对地面的车速，并对连续帧结果进行滤波',
+          '密度估计 — 使用“高架实体内车辆像素面积 ÷ 高架实体像素面积”计算图像空间密度',
+          '项目示例规则 — AVG SPEED < 10 且 DENSITY > 50 判定拥堵；motorcycle / person 进入高架实体区域时触发事件提醒',
+        ],
+      },
+      {
+        kicker: '服务化',
+        lead: '让视觉算法从离线脚本变成可调用的服务。',
+        text:
+          '使用 FastAPI + Uvicorn 封装完整分析链路，同时提供批处理任务和实时流式推送两条使用路径，让 AI 推理能力真正进入应用层。',
+        flow: {
+          caption: '服务链路',
+          stages: [
+            {
+              title: '调用方',
+              items: [{ name: '前端'}],
+            },
+            {
+              title: '接口层',
+              items: [{ name: 'FastAPI'}],
+            },
+            {
+              title: '推理',
+              items: [{ name: 'AI 推理流水线'}],
+            },
+            {
+              title: '产出',
+              items: [{ name: '分析结果'}],
+            },
+          ],
+        },
+        table: {
+          caption: '接口设计',
+          head: ['方法', '接口', '作用'],
+          rows: [
+            ['POST', '/analyze', '提交视频分析任务，适合批处理工作流'],
+            ['WS', '/stream', '实时推送分析结果与交通状态'],
+            ['GET', '/result/{task_id}', '获取指定分析任务的结果'],
+          ],
+        },
+        points: [
+          '批处理 — 提交完整视频任务，分析完成后通过任务 ID 获取结果',
+          '实时流式 — 通过 WebSocket 持续接收分析结果和交通状态变化',
+        ],
       },
     ],
     metrics: [
@@ -280,7 +368,7 @@ export const projects: Project[] = [
       {
         value: '3.8',
         unit: '×',
-        label: '性能提升',
+        label: '相较串行基准的吞吐提升',
       },
       {
         value: '13.4',
@@ -288,9 +376,10 @@ export const projects: Project[] = [
         label: '单帧平均延迟',
       },
     ],
-    metricsNote: '吞吐的提升主要来自流水线：把检测、跟踪、坐标转换拆成独立的段之后，它们可以并行跑在不同的帧上，而不是排队等上一段结束。',
-    href: 'https://github.com/lizao-hub/traffic-analyzer',
-    hrefLabel: 'GitHub 仓库',
+    metricsNote:
+      '19.8 FPS → 74.6 FPS：性能提升主要来自流水线并行，而不是单纯替换模型。',
+    // href: 'https://github.com/lizao-hub/traffic-analyzer',
+    // hrefLabel: 'GitHub 仓库',
   },
 ]
 
@@ -306,6 +395,10 @@ export function findProject(slug: string): Project | undefined {
 /**
  * 详情页底部的「上一件 / 下一件」。
  * 走 projectsByDate 而不是 projects，和列表页是同一条顺序。
+ *
+ * ⚠️ **当前没有落点**：详情页底部改成了「回列表」（下方一个出口），
+ * 相邻项目导航 2026-09-20 撤掉了。函数留着 —— 顺序口径和列表页共用一条，
+ * 哪天真要再接回去，直接接上即可。
  */
 export function projectNeighbours(slug: string): { prev?: Project; next?: Project } {
   const index = projectsByDate.findIndex((project) => project.slug === slug)

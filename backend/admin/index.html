@@ -81,11 +81,7 @@
   .tile {
     position: relative; padding: .55rem .55rem .6rem;
     background: var(--surface); border: 1px solid var(--line-soft); border-radius: 10px;
-    cursor: grab; transition: opacity 140ms, box-shadow 140ms;
   }
-  .tile.is-dragging { opacity: .35; }
-  .tile.is-before { box-shadow: -3px 0 0 var(--accent); }
-  .tile.is-after  { box-shadow: 3px 0 0 var(--accent); }
   .tile:hover { box-shadow: 0 1px 0 var(--line); }
 
   .tile__frame { position: relative; aspect-ratio: 1/1; background: #fff;
@@ -102,15 +98,14 @@
   .tile__name { font-size: .7rem; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tile__size { font-size: .68rem; color: var(--ink-faint); flex: none; }
 
-  .tile__acts { display: flex; gap: .3rem; margin-top: .5rem; }
+  /* 只剩删除一个动作：不撑满整行，贴右，别让红色悬停铺得太响 */
+  .tile__acts { display: flex; justify-content: flex-end; margin-top: .5rem; }
   .tile__acts button {
-    flex: 1; padding: .25rem 0; border: 1px solid var(--line-soft); border-radius: 5px;
+    padding: .25rem .6rem; border: 1px solid var(--line-soft); border-radius: 5px;
     background: transparent; color: var(--ink-soft); font-size: .72rem; cursor: pointer;
     transition: border-color 140ms, color 140ms;
   }
-  .tile__acts button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
-  .tile__acts button:disabled { opacity: .35; cursor: default; }
-  .tile__acts button[data-act="del"]:hover { border-color: var(--danger); color: var(--danger); }
+  .tile__acts button:hover { border-color: var(--danger); color: var(--danger); }
 
   .empty { margin-top: 1.5rem; font-size: .82rem; color: var(--ink-faint); }
 
@@ -147,82 +142,6 @@
   .cmt__del:hover:not(:disabled) { border-color: var(--danger); color: var(--danger); }
   .cmt__del:disabled { opacity: .35; cursor: default; }
 
-  /*
-   * 提示条：目录里有没编号的文件时出现。
-   * 用青绿那一档而不是暖黄 —— 跟站上那唯一的强调色对齐，工具页别自己另开一套。
-   * （「站上只有冷色」那条规矩已于 2026-09-19 废止，这里留青绿是配色延续，不是约束。）
-   */
-  .banner {
-    display: flex; align-items: center; justify-content: space-between; gap: 1.25rem;
-    margin-top: 1.75rem; padding: .8rem 1rem;
-    background: #f2f8f5; border: 1px solid #cfe3da; border-radius: 10px;
-    font-size: .79rem; line-height: 1.7; color: var(--ink);
-  }
-  .banner[hidden] { display: none; }
-  .banner b { font-weight: 500; }
-  .banner code { font: 12px ui-monospace, Consolas, monospace; color: var(--ink-soft); }
-
-  /* ---------- 裁切弹层 ---------- */
-
-  .modal {
-    position: fixed; inset: 0; z-index: 10;
-    display: flex; align-items: center; justify-content: center;
-    background: rgba(46,49,48,.42); padding: 1.5rem;
-  }
-  .modal[hidden] { display: none; }
-  .modal__box {
-    width: min(520px, 100%); max-height: 100%; overflow: auto;
-    background: var(--paper); border-radius: 14px; padding: 1.5rem;
-  }
-  .modal__hint { margin: .35rem 0 0; font-size: .78rem; color: var(--ink-soft); }
-
-  /*
-   * 裁切视口。正方形，宽度取三者的最小值：想要的 420px、容器宽度、以及 50vh。
-   *
-   * 那个 50vh 是给矮窗口留的：视口一高，下面那排「取消 / 加入照片墙」
-   * 就会被顶到弹层可视区外面（弹层虽然能滚，但主按钮不该要人先滚一下才看见）。
-   * 宽屏上 50vh 远大于 420，这一条不生效。
-   *
-   * 注意这里**只改宽度** —— 高度由 aspect-ratio 跟着来，
-   * 而 JS 那边的换算读的就是 clientWidth，所以它自动跟着变。
-   */
-  .crop {
-    position: relative; width: min(420px, 100%, 50vh); aspect-ratio: 1/1;
-    margin: 1rem auto .35rem; overflow: hidden; border-radius: 6px;
-    background: #e8edea; border: 1px solid var(--line);
-    cursor: grab; touch-action: none;
-  }
-  .crop:active { cursor: grabbing; }
-  .crop canvas { display: block; width: 100%; height: 100%; }
-
-  /* 三分线：只是构图参考，不参与裁切计算 —— 裁切范围就是这个方框本身 */
-  .crop__guide { position: absolute; inset: 0; pointer-events: none; }
-  .crop__guide::before, .crop__guide::after {
-    content: ""; position: absolute; background: rgba(255,255,255,.45);
-  }
-  .crop__guide::before { left: 33.33%; top: 0; bottom: 0; width: 1px; box-shadow: 33.33% 0 0 rgba(255,255,255,.45); }
-  .crop__guide::after { top: 33.33%; left: 0; right: 0; height: 1px; box-shadow: 0 33.33% 0 rgba(255,255,255,.45); }
-
-  .crop__controls { display: flex; align-items: center; gap: .75rem; margin-top: .6rem; }
-  .crop__controls input[type=range] { flex: 1; accent-color: var(--accent); }
-  .crop__readout {
-    margin: .55rem 0 0; padding: .5rem .7rem; background: var(--surface);
-    border: 1px solid var(--line-soft); border-radius: 6px;
-    font: 12px/1.7 ui-monospace, Consolas, monospace; color: var(--ink-soft);
-  }
-
-  .btn {
-    padding: .5rem 1.1rem; border: 1px solid var(--line); border-radius: 7px;
-    background: transparent; color: var(--ink); font-size: .82rem; cursor: pointer;
-    transition: border-color 140ms, background 140ms;
-  }
-  .btn:hover:not(:disabled) { border-color: var(--accent); }
-  .btn:disabled { opacity: .4; cursor: default; }
-  .btn--primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .btn--primary:hover:not(:disabled) { background: #5d7f75; border-color: #5d7f75; }
-
-  .modal__actions { display: flex; justify-content: flex-end; gap: .6rem; margin-top: 1.25rem; }
-
   /* ---------- 提示条 ---------- */
 
   .toast {
@@ -241,7 +160,7 @@
   <div class="head">
     <div>
       <h1>影像 · 管理</h1>
-      <p class="head__sub">往影像页的照片墙里加图、调顺序。上传时裁成正方形。</p>
+      <p class="head__sub">往影像页的照片墙里加图。选完即上传，方图由后端兜底裁。</p>
     </div>
   </div>
 
@@ -250,19 +169,13 @@
   <div class="dir" id="dirBox">加载中…</div>
 
   <p class="note">
-    照片存进前端源码目录，由 <b>import.meta.glob</b> 在构建期收进去 ——
-    所以前端一行都不用改，站点也还是纯静态的。代价：<b>传完要重启 dev server
-    或重新 build</b>，影像页才会变。顺序就是文件名里的编号，没有第二份清单。
+    照片存在后端目录（<b>运行时</b>读取，不是打进构建产物），影像页刷新就能看到。
+    顺序就是文件名里的编号、也就是上传的先后，<b>不可调</b> —— 没有第二份清单。
   </p>
-
-  <div class="banner" id="banner" hidden>
-    <span id="bannerText"></span>
-    <button class="btn" id="normalizeBtn">统一编号</button>
-  </div>
 
   <div class="drop" id="drop">
     <p class="drop__main">把照片拖进来，或者点这里选</p>
-    <p class="drop__sub">JPG / PNG / WebP · 选完会让你拖拽裁成正方形</p>
+    <p class="drop__sub">JPG / PNG / WebP · 选完直接上传，后端居中裁成正方形</p>
     <input type="file" id="fileInput" accept="image/*" multiple>
   </div>
 
@@ -271,7 +184,6 @@
       <h2>照片墙</h2>
       <span class="section__count" id="count"></span>
     </div>
-    <p class="head__sub">拖动卡片调整位置，或用卡片下方的 ← → 。松手即保存。</p>
     <ul class="grid" id="grid"></ul>
     <p class="empty" id="empty" hidden>还没有照片。上面拖一张进来。</p>
   </section>
@@ -289,30 +201,6 @@
 
 </div>
 
-<div class="modal" id="modal" hidden>
-  <div class="modal__box">
-    <h2>裁成正方形</h2>
-    <p class="modal__hint">拖动图片调整位置，滚轮或滑块缩放。方框以内就是最终画面。</p>
-
-    <div class="crop" id="cropViewport">
-      <canvas id="cropCanvas"></canvas>
-      <div class="crop__guide"></div>
-    </div>
-
-    <div class="crop__controls">
-      <input type="range" id="zoomRange" min="1" max="3" step="0.01" value="1">
-      <button class="btn" id="resetBtn">居中</button>
-    </div>
-
-    <p class="crop__readout" id="readout"></p>
-
-    <div class="modal__actions">
-      <button class="btn" id="cancelBtn">取消</button>
-      <button class="btn btn--primary" id="confirmBtn">加入照片墙</button>
-    </div>
-  </div>
-</div>
-
 <div class="toast" id="toast"></div>
 
 <script>
@@ -323,7 +211,6 @@
 const state = {
   photos: [],
   meta: {},
-  pending: null,   // 正在裁的那张：{ file, bitmap, zoom, tx, ty }
 };
 
 const $ = (id) => document.getElementById(id);
@@ -391,77 +278,26 @@ function render() {
   $('count').textContent = count ? '共 ' + count + ' 张，按这个顺序显示' : '';
   $('empty').hidden = count > 0;
 
-  /*
-   * 没编号的文件要说出来。它们按「谁也不是第一」排在最后，
-   * 而影像页那边是 localeCompare(zh-Hans-CN) 在排 —— 中英混排时两边
-   * 会给出不同的顺序（汉字在 JS 里排在拉丁字母前面，Python 按码点比是反的）。
-   * 统一编号之后所有名字都以数字开头，第一段就把顺序定死了，两边必然一致。
-   */
-  const loose = state.meta.unnumbered || [];
-  $('banner').hidden = loose.length === 0;
-  if (loose.length) {
-    $('bannerText').innerHTML =
-      '有 <b>' + loose.length + '</b> 张没有编号（<code>' + esc(loose[0]) + '</code>' +
-      (loose.length > 1 ? ' 等' : '') + '），现在排在最后。' +
-      '没编号时这里的顺序和影像页可能对不上 —— 点一下右边，给它们排上号。';
-  }
-
   grid.innerHTML = state.photos.map((photo, i) => `
-    <li class="tile" draggable="true" data-index="${i}">
+    <li class="tile" data-index="${i}">
       <div class="tile__frame">
         <img src="${esc(photo.url)}" alt="" loading="lazy">
         <span class="tile__no">${ordinal(photo.index)}</span>
       </div>
       <div class="tile__row">
-        <span class="tile__name" title="${esc(photo.name)}${photo.width ? ' · ' + photo.width + '×' + photo.height : ''}">${esc(photo.name)}</span>
+        <span class="tile__name" title="${esc(photo.name)}">${esc(photo.name)}</span>
         <span class="tile__size">${human(photo.bytes)}</span>
       </div>
       <div class="tile__acts">
-        <button data-act="left" data-index="${i}" ${i === 0 ? 'disabled' : ''} title="前移">←</button>
-        <button data-act="right" data-index="${i}" ${i === state.photos.length - 1 ? 'disabled' : ''} title="后移">→</button>
         <button data-act="del" data-index="${i}" title="删除">删除</button>
       </div>
     </li>`).join('');
-}
-
-/** 顺序变了就立刻照本地数组重画，再去写盘 —— 拖完不用等网络。 */
-async function applyOrder(next) {
-  const names = next.map((photo) => photo.name);
-  state.photos = next;
-  // index 是显示用的序号，本地也要跟着更新
-  state.photos.forEach((photo, i) => { photo.index = i + 1; });
-  render();
-  try {
-    const data = await api('/api/photos/order', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ order: names }),
-    });
-    state.meta = data;
-    state.photos = data.photos;
-    render();
-  } catch (err) {
-    toast('保存顺序失败：' + err.message, true);
-    load().catch(() => {});
-  }
-}
-
-function move(from, to) {
-  if (to < 0 || to >= state.photos.length || from === to) return;
-  const next = state.photos.slice();
-  const [item] = next.splice(from, 1);
-  next.splice(to, 0, item);
-  applyOrder(next);
 }
 
 grid.addEventListener('click', async (event) => {
   const button = event.target.closest('button[data-act]');
   if (!button) return;
   const index = Number(button.dataset.index);
-
-  if (button.dataset.act === 'left') return move(index, index - 1);
-  if (button.dataset.act === 'right') return move(index, index + 1);
-
   const photo = state.photos[index];
   if (!confirm('删掉 ' + photo.name + '？文件会直接从目录里移除。')) return;
   try {
@@ -475,91 +311,16 @@ grid.addEventListener('click', async (event) => {
   }
 });
 
-$('normalizeBtn').addEventListener('click', async () => {
-  // 只是给文件加上编号前缀，顺序本身不动 —— 但加完之后两边就一定一致了：
-  // 名字都以数字开头，第一段就分出先后，后面几段根本不参与比较
-  try {
-    const data = await api('/api/photos/normalize', { method: 'POST' });
-    state.meta = data;
-    state.photos = data.photos;
-    render();
-    toast('已统一编号');
-  } catch (err) {
-    toast('统一编号失败：' + err.message, true);
-  }
-});
-
 /* ------------------------------------------------------------------ *
- * 拖拽排序
+ * 选文件 → 直接上传
  *
- * 拖的过程中**不重画 DOM** —— 被拖的那个节点一换掉，浏览器就认为
- * 拖动取消了（dragend 直接触发）。所以只在目标卡片上挂一条标记线，
- * 松手时才真的挪。
- * ------------------------------------------------------------------ */
-
-let dragFrom = null;
-let dropAt = null;
-
-function clearMarks() {
-  grid.querySelectorAll('.is-before, .is-after').forEach((el) =>
-    el.classList.remove('is-before', 'is-after'));
-}
-
-function resetDrag() {
-  clearMarks();
-  grid.querySelectorAll('.is-dragging').forEach((el) => el.classList.remove('is-dragging'));
-  dragFrom = null;
-  dropAt = null;
-}
-
-grid.addEventListener('dragstart', (event) => {
-  const tile = event.target.closest('.tile');
-  if (!tile) return;
-  dragFrom = Number(tile.dataset.index);
-  dropAt = null;
-  event.dataTransfer.effectAllowed = 'move';
-  event.dataTransfer.setData('text/plain', tile.dataset.index);
-  tile.classList.add('is-dragging');
-});
-
-grid.addEventListener('dragover', (event) => {
-  if (dragFrom === null) return;
-  event.preventDefault();
-  event.dataTransfer.dropEffect = 'move';
-  clearMarks();
-
-  const tile = event.target.closest('.tile');
-  if (!tile) { dropAt = null; return; }
-
-  const rect = tile.getBoundingClientRect();
-  const before = event.clientX < rect.left + rect.width / 2;
-  tile.classList.add(before ? 'is-before' : 'is-after');
-  dropAt = { index: Number(tile.dataset.index), before };
-});
-
-grid.addEventListener('drop', (event) => {
-  if (dragFrom === null) return;
-  event.preventDefault();
-  const from = dragFrom;
-  const at = dropAt;
-  resetDrag();
-  if (!at) return;
-
-  // 「插到第 at 张之前 / 之后」换算成「挪到哪个下标」，再抵消自己让出的那一格
-  let to = at.before ? at.index : at.index + 1;
-  if (to > from) to -= 1;
-  if (to === from) return;
-
-  const next = state.photos.slice();
-  const [item] = next.splice(from, 1);
-  next.splice(to, 0, item);
-  applyOrder(next);
-});
-
-grid.addEventListener('dragend', resetDrag);
-
-/* ------------------------------------------------------------------ *
- * 选文件
+ * 不做前端裁剪了：**图是不是方的，由后端 _to_rgb_square() 兜底**
+ * （它会先按 EXIF 摆正、再居中裁成方图、缩到 MAX_SIDE）。
+ * 这里只做两件事：把原文件塞进 FormData，POST 出去。
+ *
+ * 代价是上传的是原图字节，比「前端先裁再传」费流量（手机原图十几 MB）。
+ * 换来的是这条链路短了一截，而且**方图这件事只在一处定义**，
+ * 前端不用再复刻一遍坐标系换算 —— 那种两处对齐的代码迟早会对不上。
  * ------------------------------------------------------------------ */
 
 $('drop').addEventListener('click', () => $('fileInput').click());
@@ -580,7 +341,7 @@ $('fileInput').addEventListener('change', (event) => {
   event.target.value = '';
 });
 
-/** 一张一张来。裁切是要人参与的事，排着队比一屏糊上来好用。 */
+/** 一张一张来。并发上传只会让「第几张成功了」说不清。 */
 const queue = [];
 let busy = false;
 
@@ -597,221 +358,30 @@ async function nextInQueue() {
   busy = true;
   const file = queue.shift();
   try {
-    const bitmap = await loadBitmap(file);
-    openCropper(file, bitmap);
+    await upload(file);
   } catch (err) {
-    toast('读不了这张图：' + file.name, true);
-    nextInQueue();
-  }
-}
-
-/**
- * 先解码成位图再谈坐标。
- *
- * `imageOrientation: 'from-image'` 让它**按 EXIF 摆正** ——
- * 手机竖拍的照片文件里是横的，只在 EXIF 写了一句「转 90°」。
- * 不摆正的话，这里是横的、后端按 EXIF 摆正，裁出来就是偏的。
- * 老浏览器不认这个参数会直接抛错，退回不摆正那一档。
- */
-async function loadBitmap(file) {
-  try {
-    return await createImageBitmap(file, { imageOrientation: 'from-image' });
-  } catch (_) {
-    return await createImageBitmap(file);
-  }
-}
-
-/* ------------------------------------------------------------------ *
- * 裁切
- *
- * 坐标一律用「视口 CSS 像素」，只有确认那一刻才换算回原图像素。
- * 视口是正方形，所以裁切范围就是它自己 —— 不需要额外的裁切框。
- * ------------------------------------------------------------------ */
-
-const canvas = $('cropCanvas');
-const viewport = $('cropViewport');
-const ctx = canvas.getContext('2d');
-
-function viewportSize() { return viewport.clientWidth; }
-
-/** 让「短边刚好铺满视口」的那个缩放比例。zoom = 1 就是铺满、不能再小。 */
-function baseScale() {
-  const { bitmap } = state.pending;
-  return viewportSize() / Math.min(bitmap.width, bitmap.height);
-}
-
-function clampOffset() {
-  const p = state.pending;
-  const size = viewportSize();
-  const scale = baseScale() * p.zoom;
-  const drawW = p.bitmap.width * scale;
-  const drawH = p.bitmap.height * scale;
-  // 图片必须始终盖满视口：没盖住就会露出灰底，那样的裁切没有意义
-  p.tx = Math.min(0, Math.max(size - drawW, p.tx));
-  p.ty = Math.min(0, Math.max(size - drawH, p.ty));
-}
-
-function draw() {
-  const p = state.pending;
-  if (!p) return;
-
-  const size = viewportSize();
-  const scale = baseScale() * p.zoom;
-  clampOffset();
-
-  const dpr = window.devicePixelRatio || 1;
-  if (canvas.width !== Math.round(size * dpr)) {
-    canvas.width = Math.round(size * dpr);
-    canvas.height = Math.round(size * dpr);
-  }
-
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, size, size);
-  ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(p.bitmap, p.tx, p.ty, p.bitmap.width * scale, p.bitmap.height * scale);
-
-  const cropSide = Math.round(size / scale);
-  const outputSide = Math.min(cropSide, state.meta.max_side || 1600);
-  $('readout').textContent =
-    '原图 ' + p.bitmap.width + ' × ' + p.bitmap.height +
-    '\n裁切 ' + cropSide + ' × ' + cropSide +
-    '  →  输出 ' + outputSide + ' × ' + outputSide;
-  $('readout').style.whiteSpace = 'pre-line';
-}
-
-function openCropper(file, bitmap) {
-  state.pending = { file, bitmap, zoom: 1, tx: 0, ty: 0 };
-  $('modal').hidden = false;
-  $('zoomRange').value = 1;
-  // 视口尺寸要等布局完成才读得到
-  requestAnimationFrame(() => {
-    state.pending.tx = (viewportSize() - bitmap.width * baseScale()) / 2;
-    state.pending.ty = (viewportSize() - bitmap.height * baseScale()) / 2;
-    draw();
-  });
-}
-
-function closeCropper() {
-  state.pending = null;
-  $('modal').hidden = true;
-}
-
-/** 缩放时钉住视口中心对应的那个图像点，不然会觉得画面在乱跑。 */
-function setZoom(next) {
-  const p = state.pending;
-  if (!p) return;
-  const size = viewportSize();
-  const oldScale = baseScale();
-  const centerX = (size / 2 - p.tx) / (oldScale * p.zoom);
-  const centerY = (size / 2 - p.ty) / (oldScale * p.zoom);
-
-  p.zoom = Math.min(3, Math.max(1, next));
-  const newScale = baseScale() * p.zoom;
-  p.tx = size / 2 - centerX * newScale;
-  p.ty = size / 2 - centerY * newScale;
-
-  $('zoomRange').value = p.zoom;
-  draw();
-}
-
-let panning = null;
-
-viewport.addEventListener('pointerdown', (event) => {
-  if (!state.pending) return;
-  viewport.setPointerCapture(event.pointerId);
-  panning = { x: event.clientX, y: event.clientY, tx: state.pending.tx, ty: state.pending.ty };
-  event.preventDefault();
-});
-
-viewport.addEventListener('pointermove', (event) => {
-  if (!panning || !state.pending) return;
-  state.pending.tx = panning.tx + (event.clientX - panning.x);
-  state.pending.ty = panning.ty + (event.clientY - panning.y);
-  draw();
-});
-
-function endPan() { panning = null; }
-viewport.addEventListener('pointerup', endPan);
-viewport.addEventListener('pointercancel', endPan);
-
-viewport.addEventListener('wheel', (event) => {
-  if (!state.pending) return;
-  event.preventDefault();
-  setZoom(state.pending.zoom * (event.deltaY > 0 ? 0.94 : 1.06));
-}, { passive: false });
-
-$('zoomRange').addEventListener('input', (event) => setZoom(Number(event.target.value)));
-
-$('resetBtn').addEventListener('click', () => {
-  const p = state.pending;
-  if (!p) return;
-  p.zoom = 1;
-  $('zoomRange').value = 1;
-  p.tx = (viewportSize() - p.bitmap.width * baseScale()) / 2;
-  p.ty = (viewportSize() - p.bitmap.height * baseScale()) / 2;
-  draw();
-});
-
-$('cancelBtn').addEventListener('click', () => { closeCropper(); nextInQueue(); });
-$('modal').addEventListener('click', (event) => {
-  if (event.target === $('modal')) { closeCropper(); nextInQueue(); }
-});
-document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape' && state.pending) { closeCropper(); nextInQueue(); }
-});
-
-/**
- * 确认：把视口那块正方形按原图分辨率重画一遍再上传。
- *
- * 这里裁出来的一定是正方形 JPEG，后端还会再兜一道（不是方的就居中裁）。
- * 上传的是 0.92 的 JPEG 而不是 PNG —— 后端拿到后还会缩到 1600 再编码一次，
- * 中间这一步没必要用无损的、白白多出几 MB 流量。
- */
-$('confirmBtn').addEventListener('click', async () => {
-  const p = state.pending;
-  if (!p) return;
-
-  const button = $('confirmBtn');
-  button.disabled = true;
-  button.textContent = '正在保存…';
-
-  try {
-    const size = viewportSize();
-    const scale = baseScale() * p.zoom;
-    const sourceX = -p.tx / scale;
-    const sourceY = -p.ty / scale;
-    const cropSide = size / scale;
-    const outputSide = Math.max(1, Math.min(Math.round(cropSide), state.meta.max_side || 1600));
-
-    const out = document.createElement('canvas');
-    out.width = outputSide;
-    out.height = outputSide;
-    const octx = out.getContext('2d');
-    octx.imageSmoothingQuality = 'high';
-    octx.drawImage(p.bitmap, sourceX, sourceY, cropSide, cropSide, 0, 0, outputSide, outputSide);
-
-    const blob = await new Promise((resolve) => out.toBlob(resolve, 'image/jpeg', 0.92));
-    if (!blob) throw new Error('浏览器没能导出图片');
-
-    const form = new FormData();
-    form.append('file', blob, p.file.name.replace(/\.[^.]+$/, '') + '.jpg');
-
-    const data = await api('/api/photos', { method: 'POST', body: form });
-    state.meta = data;
-    state.photos = data.photos;
-    render();
-    closeCropper();
-    toast('已加入照片墙 · 记得重启 dev server');
-  } catch (err) {
-    toast('保存失败：' + err.message, true);
+    toast(file.name + '：' + err.message, true);
   } finally {
-    button.disabled = false;
-    button.textContent = '加入照片墙';
     nextInQueue();
   }
-});
+}
 
-window.addEventListener('resize', () => { if (state.pending) draw(); });
+/**
+ * 上传一张原图。成功返回的**是整个清单**（后端 /api/photos 就是这么回的），
+ * 所以这里直接拿它重画网格，不用自己往 state.photos 里塞。
+ *
+ * 文件名由后端定：存的是一串自增编号，`1.jpg`、`2.jpg`……
+ * 原名不参与命名（照片墙上认的是图，不是文件名）。
+ */
+async function upload(file) {
+  const form = new FormData();
+  form.append('file', file, file.name);
+  const data = await api('/api/photos', { method: 'POST', body: form });
+  state.meta = data;
+  state.photos = data.photos;
+  render();
+  toast('已加入照片墙');
+}
 
 /* ------------------------------------------------------------------ *
  * 留言（项目页那个留言区。照片与留言是两件事，各读各的接口）

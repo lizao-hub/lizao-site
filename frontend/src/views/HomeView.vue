@@ -46,7 +46,8 @@ onBeforeUnmount(() => window.clearTimeout(timer))
       <div class="intro">
         <p class="intro__name">LIzao 的自留地</p>
         <p class="intro__meta">Hi, I'm LIzao</p>
-        <p class="intro__meta">你还好吗请问我不是很好</p>
+        <!-- 这一句和页脚最上面那行是同一句，只在 data/profile.ts 里写一次 -->
+        <p class="intro__meta">{{ profile.signature }}</p>
         <p class="intro__murmur">01 | 27届 | INTP</p>
         <!-- <p class="intro__murmur">XINGXING 一直都在</p> -->
       </div>

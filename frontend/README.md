@@ -43,3 +43,7 @@ Vue 3 + Vite + TypeScript + Tailwind v3。构建产物是纯静态的，丢给 N
 - 输入框字号在窄屏要 ≥16px：iOS Safari 会对小于 16px 的输入框自动放大整页。
 
 ---
+
+
+   cd E:\Pycharm\lizao-site\backend                                                                                                                    
+   uv run uvicorn main:app --reload --port 8000   

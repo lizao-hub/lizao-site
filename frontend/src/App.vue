@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
 import SiteNav from '@/components/SiteNav.vue'
+import SiteFooter from '@/components/SiteFooter.vue'
 
 const route = useRoute()
 
@@ -13,33 +14,43 @@ const route = useRoute()
  *
  * 屋里（/room）是「导航独立占上面一条」：舞台让开了 --nav-h
  * （SceneStage 的 navClearance），景的上沿贴着导航条的下沿，两者不重叠。
- * 它同样不要页脚和噪点（噪点叠在水彩上会脏）。
+ * 它不要纸感噪点（噪点叠在水彩上会脏），但**要页脚** —— 为此它的舞台
+ * 走 SceneStage 的 `flow`（回到文档流，不再 fixed），否则页脚会被
+ * 铺满视口的舞台顶到屏幕外。
  */
 const isScene = computed(() => route.meta.scene === true)
 
 /**
- * 屋里：有导航（独立占上面一条），但不要页脚
- * （舞台是 100vh 且 fixed，页脚会被顶到屏幕外）、
- * 不要纸感噪点（水彩叠噪点会脏）。
+ * 屋里。它有导航（独立占上面一条），也有页脚（舞台走文档流让出了底部）。
  *
- * 曾经这里还有一个 isProjects 特判（那一页整页是一台 fixed 显示器），
- * 已随 /projects 的内容清空一起去掉 —— 它现在和其余两个空页一样，
- * 就是一张普通的纸，照常吃噪点、照常跟着文档流滚动。
+ * 它和内容页只差一件事：**它不叠纸感噪点**（水彩叠噪点会脏）。
  */
 const isRoom = computed(() => route.name === 'room')
 
 /**
- * 纸感噪点：只给普通内容页（场景页不叠，水彩叠噪点会脏）。
- * 注意：页脚原先也由 hasChrome 控制，现已全站移除，
- * 待后续统一重新制作（见 SiteFooter.vue，暂未挂载）。
+ * 「普通内容页」＝项目清单 / 项目详情 / 影像：纸感噪点只有它们叠。
+ *
+ * 场景页（湖边、屋里）都不叠 —— 水彩叠噪点会脏。
  */
-const hasChrome = computed(() => !isScene.value && !isRoom.value)
+const hasGrain = computed(() => !isScene.value && !isRoom.value)
+
+/**
+ * 页脚：**除了湖边，每一页都有。**
+ *
+ * 2026-09-20 重新挂上（此前全站移除过一版，见 SiteFooter.vue 的注释）；
+ * 屋里原本被排除在外（舞台是 fixed 铺满视口的景，页脚会被顶到屏幕外，
+ * 也会把一幅画压成一块装饰）—— 舞台改成走文档流之后这条理由不成立了，
+ * 于是屋里也吃上了。
+ *
+ * 湖边仍然没有：那一页整页就是一幅景，它根本没有「页面底部」这个东西。
+ */
+const hasFooter = computed(() => !isScene.value)
 </script>
 
 <template>
   <!-- 纸感噪点铺在最底层，整站共用。景上不叠：水彩叠噪点会脏 -->
   <div
-    v-if="hasChrome"
+    v-if="hasGrain"
     class="grain pointer-events-none fixed inset-0 z-0"
     aria-hidden="true"
   />
@@ -54,7 +65,7 @@ const hasChrome = computed(() => !isScene.value && !isRoom.value)
 
   <!--
     z-10 包住内容，让导航和它同层而不被压在下面。
-    注意别在这里加 transform / filter：场景页的 .stage-wrap 是 fixed，
+    注意别在这里加 transform / filter：湖边那一页的 .stage-wrap 是 fixed，
     祖先一旦有 transform 就会变成包含块，把舞台推出屏幕。
   -->
   <div class="relative z-10">
@@ -64,5 +75,12 @@ const hasChrome = computed(() => !isScene.value && !isRoom.value)
         <component :is="Component" :key="route.fullPath" />
       </Transition>
     </RouterView>
+
+    <!--
+      页脚放在这个 z-10 的盒子里（而不是它外面）：噪点那层是 fixed z-0，
+      不成层的静态块会被压在它下面。放在这儿和内容同层，省掉一个 z-index。
+      它在 Transition 之外 —— 切页时页脚不跟着淡入淡出，位置不动。
+    -->
+    <SiteFooter v-if="hasFooter" />
   </div>
 </template>

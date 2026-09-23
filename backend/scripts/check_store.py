@@ -8,18 +8,15 @@ store.py 的自检。**不依赖 FastAPI**，在临时目录里跑，不碰真�
 
 为什么留这么一个脚本（而不是靠手点管理页）：
 
-1. **顺序是「文件名里的编号」**，而 `natural_key` 是前端
-   `localeCompare(..., { numeric: true })` 的 Python 版。两边一旦不一致，
-   管理页看到的顺序和影像页看到的就不是一回事 —— 这种错很安静，
-   手动测基本撞不到（要正好造出一个中英混排的文件名才会露出来）。
-   下面 `test_order` 里的期望值是把同一批文件名丢给 node 的
-   `localeCompare(zh-Hans-CN)` 实测出来的，不是猜的。
+1. **顺序就是文件名里的编号**（`NN.jpg`），`natural_key` 是唯一的排序依据。
+   这套顺序**没有接口能改** —— 没有重排、也不要第二份清单，于是「上传的先后
+   就是展示的顺序」这条约定只能靠这一处保证。退化成普通字典序的话
+   `10.jpg` 会跑到 `2.jpg` 前面，而这种错在只有两三张图时看不出来。
 
-2. **`reorder` 是两趟改名**（先全改成临时名、再改成最终名）。一趟会撞车：
-   `01-a.jpg` 要变 `02-a.jpg`，而 `02-b.jpg` 正占着这个位置。
-   这种「改到一半失败」的路径手工点很难覆盖，但它是会真的砸数据的。
+   还有一条：**删掉 `1.jpg` 后下一张仍然是 `3.jpg`**（id 不补洞）。
+   要是有人把 `next_index` 改成「取第一个空位」，已发出的 URL 就会串到别人身上。
 
-3. **EXIF 摆正**决定了裁哪一块。手机竖拍的照片文件里是横的，
+2. **EXIF 摆正**决定了裁哪一块。手机竖拍的照片文件里是横的，
    只在 EXIF 里写了一句「转 90°」。漏了这一步，裁出来的是偏的，
    而且在管理页上看不出来（前端已经摆正过了，两边观感不同步）。
 """
@@ -74,68 +71,90 @@ def png_bytes(size: tuple[int, int], color=(255, 0, 0, 0)) -> bytes:
 
 
 def test_order() -> None:
-    print("\n[1] 排序：natural_key 必须和前端 localeCompare 一致")
+    print("\n[1] 排序：natural_key 决定照片墙的顺序")
     import store
 
-    names = ["02-b.jpg", "10-c.jpg", "1-a.jpg", "03-湖.jpg", "07-x.jpg", "100-z.jpg"]
-    expected = ["1-a.jpg", "02-b.jpg", "03-湖.jpg", "07-x.jpg", "10-c.jpg", "100-z.jpg"]
+    names = ["2.jpg", "10.jpg", "1.jpg", "3.jpg", "7.jpg", "100.jpg"]
+    expected = ["1.jpg", "2.jpg", "3.jpg", "7.jpg", "10.jpg", "100.jpg"]
     actual = sorted(names, key=store.natural_key)
-    check("带编号的名字按数值排（2 在 10 前）", actual == expected, f"得到 {actual}")
+    check("按数值排（2 在 10 前，100 在最后）", actual == expected, f"得到 {actual}")
 
-    # 前端给的是 ['微信图片_x.jpg', 'photo.jpg']（中文排序把汉字排在拉丁字母前）。
-    # 这里是反的 —— 已知差异，也是管理页要有「统一编号」的原因。
-    # 把它钉住，免得哪天 quietly 变了却没人知道。
-    mixed = ["微信图片_x.jpg", "photo.jpg"]
+    # 手动丢进来的杂文件（不该发生，但真漏进来时不能让列表挂掉）。
+    # 它们排在最后、不参与编号分配，也不影响正常照片之间的顺序。
+    junk = ["微信图片_x.jpg", "Thumbs.jpg", "2.jpg", "10.jpg"]
+    actual = sorted(junk, key=store.natural_key)
     check(
-        "没编号的中英混排（已知差异，靠统一编号消掉）",
-        sorted(mixed, key=store.natural_key) == ["photo.jpg", "微信图片_x.jpg"],
-        "差异消失了？那就该同步更新 store.natural_key 的注释",
+        "没编号的文件垫到最后",
+        actual[:2] == ["2.jpg", "10.jpg"],
+        f"得到 {actual}",
     )
 
 
+def test_next_index(tmp: Path) -> None:
+    print("\n[2] 编号：自增，删了不补洞")
+    import store
+
+    for path in tmp.iterdir():
+        path.unlink()
+
+    for _ in range(3):
+        store.save_photo(jpeg_bytes((400, 400)))
+    names = [p["name"] for p in store.list_photos()["photos"]]
+    check("三张的编号是 1 2 3", names == ["1.jpg", "2.jpg", "3.jpg"], str(names))
+
+    store.delete_photo("1.jpg")
+    saved = store.save_photo(jpeg_bytes((400, 400)))
+    check("删掉 1.jpg 之后新图是 4.jpg（不是 1.jpg）", saved["name"] == "4.jpg", saved["name"])
+
+    names = [p["name"] for p in store.list_photos()["photos"]]
+    check("剩下的顺序是 2 3 4", names == ["2.jpg", "3.jpg", "4.jpg"], str(names))
+
+
 # ---------------------------------------------------------------------
-# 2. 存图：一律正方形
+# 3. 存图：一律正方形
 # ---------------------------------------------------------------------
 
 
 def test_square(tmp: Path) -> None:
-    print("\n[2] 存图：横的竖的都得变成方的")
+    print("\n[3] 存图：横的竖的都得变成方的")
     import store
 
-    saved = store.save_photo(jpeg_bytes((1200, 800)), "横图.jpg")
+    for path in tmp.iterdir():
+        path.unlink()
+
+    saved = store.save_photo(jpeg_bytes((1200, 800)))
     with Image.open(tmp / saved["name"]) as image:
         check("4:3 横图 -> 800 x 800", image.size == (800, 800), str(image.size))
         check("输出是 RGB", image.mode == "RGB", image.mode)
 
-    saved = store.save_photo(jpeg_bytes((800, 1200)), "竖图.jpg")
+    saved = store.save_photo(jpeg_bytes((800, 1200)))
     with Image.open(tmp / saved["name"]) as image:
         check("3:4 竖图 -> 800 x 800", image.size == (800, 800), str(image.size))
 
-    saved = store.save_photo(jpeg_bytes((2400, 3000)), "大图.jpg")
+    saved = store.save_photo(jpeg_bytes((2400, 3000)))
     with Image.open(tmp / saved["name"]) as image:
         check("超限的缩到 1600 x 1600", image.size == (1600, 1600), str(image.size))
 
-    saved = store.save_photo(jpeg_bytes((300, 300)), "小图.jpg")
+    saved = store.save_photo(jpeg_bytes((300, 300)))
     with Image.open(tmp / saved["name"]) as image:
         check("小图不放大（只缩不放）", image.size == (300, 300), str(image.size))
 
-    saved = store.save_photo(jpeg_bytes((400, 400)), "已经是方的.png")
-    check("文件名带上编号前缀", saved["name"].startswith("0") and "-" in saved["name"], saved["name"])
-    check("扩展名统一成 .jpg", saved["name"].endswith(".jpg"), saved["name"])
+    saved = store.save_photo(jpeg_bytes((400, 400)))
+    check("文件名就是编号 + .jpg", saved["name"] == "5.jpg", saved["name"])
 
 
 def test_alpha(tmp: Path) -> None:
-    print("\n[3] 带透明的 PNG：垫白底，不能变黑块")
+    print("\n[4] 带透明的 PNG：垫白底，不能变黑块")
     import store
 
-    saved = store.save_photo(png_bytes((600, 600)), "透明.png")
+    saved = store.save_photo(png_bytes((600, 600)))
     with Image.open(tmp / saved["name"]) as image:
         corner = image.getpixel((5, 5))
         check("透明区被垫成白色", min(corner) > 230, str(corner))
 
 
 def test_exif(tmp: Path) -> None:
-    print("\n[4] EXIF 摆正：竖拍的照片不能裁偏")
+    print("\n[5] EXIF 摆正：竖拍的照片不能裁偏")
     import store
 
     # 1000x400 的横图，中间三分之一是黑的（x 150~350）。
@@ -149,7 +168,7 @@ def test_exif(tmp: Path) -> None:
     buffer = io.BytesIO()
     image.save(buffer, "JPEG", exif=exif.tobytes())
 
-    saved = store.save_photo(buffer.getvalue(), "竖拍.jpg")
+    saved = store.save_photo(buffer.getvalue())
     with Image.open(tmp / saved["name"]) as result:
         size = result.size
         left = result.getpixel((5, 200))
@@ -164,81 +183,32 @@ def test_exif(tmp: Path) -> None:
 
 
 # ---------------------------------------------------------------------
-# 3. 顺序：改名的两趟走法
+# 4. 删一张：挡住路径穿越
 # ---------------------------------------------------------------------
 
 
-def test_reorder(tmp: Path) -> None:
-    print("\n[5] 重排：两趟改名不能撞车")
-    import store
-
-    for path in tmp.iterdir():
-        path.unlink()
-
-    for stem in ("a", "b", "c"):
-        store.save_photo(jpeg_bytes((400, 400)), f"{stem}.jpg")
-
-    before = [p.name for p in sorted(tmp.iterdir(), key=lambda p: store.natural_key(p.name))]
-    check("三张就位", len(before) == 3, str(before))
-
-    # 反转。这是最狠的一种：01->03、03->01，两头都要经过对方的位置
-    after = store.reorder(list(reversed(before)))
-    check("反转后编号重排", after == [f"{i:02d}-{s}.jpg" for i, s in [(1, "c"), (2, "b"), (3, "a")]], str(after))
-
-    # 往前提一位：01 和 02 互换位置，02 的位置上有文件占着
-    swapped = store.reorder([after[1], after[0], after[2]])
-    check("相邻互换不撞车", swapped == ["01-b.jpg", "02-c.jpg", "03-a.jpg"], str(swapped))
-
-    check("没有留下临时文件", not any(p.name.startswith(".__staging") for p in tmp.iterdir()))
-
-    # 编号对不上时应该拒绝，而不是乱改
-    try:
-        store.reorder(["01-b.jpg", "02-不存在.jpg", "03-a.jpg"])
-        check("对不上的顺序列表要被拒绝", False, "居然通过了")
-    except ValueError:
-        check("对不上的顺序列表要被拒绝", True)
-
-    check("下一张的编号接在最大值后面", store.next_index() == 4, str(store.next_index()))
-
-
-def test_normalize(tmp: Path) -> None:
-    print("\n[6] 统一编号：把没编号的旧文件收进编号体系")
-    import store
-
-    for path in tmp.iterdir():
-        path.unlink()
-
-    for name in ("微信图片_1.jpg", "微信图片_2.jpg"):
-        (tmp / name).write_bytes(jpeg_bytes((400, 400)))
-
-    listing = store.list_photos()
-    check("没编号的被报出来", listing["unnumbered"] == ["微信图片_1.jpg", "微信图片_2.jpg"], str(listing["unnumbered"]))
-    check("它们当时没有编号", all(p["prefix"] is None for p in listing["photos"]))
-
-    store.normalize()
-
-    listing = store.list_photos()
-    check("统一之后没有漏网的", listing["unnumbered"] == [], str(listing["unnumbered"]))
-    check("顺序没被改掉", [p["name"] for p in listing["photos"]] == ["01-微信图片_1.jpg", "02-微信图片_2.jpg"], str([p["name"] for p in listing["photos"]]))
-
-
 def test_delete(tmp: Path) -> None:
-    print("\n[7] 删除：挡住路径穿越")
+    print("\n[6] 删除：挡住路径穿越")
     import store
 
-    store.normalize()
+    # 自己造两张 —— 不依赖前一个用例留在目录里的东西
+    for path in tmp.iterdir():
+        path.unlink()
+    for _ in range(2):
+        store.save_photo(jpeg_bytes((400, 400)))
+
     target = store.list_photos()["photos"][0]["name"]
-    store.delete(target)
-    check("删掉了", store.list_photos()["count"] == 1)
+    store.delete_photo(target)
+    check("删掉了", store.list_photos()["count"] == 1, str(store.list_photos()["count"]))
 
     try:
-        store.delete("../../pyproject.toml")
+        store.delete_photo("../../pyproject.toml")
         check("`../` 要被拒绝", False, "居然通过了")
     except ValueError:
         check("`../` 要被拒绝", True)
 
     try:
-        store.delete("根本没有这张.jpg")
+        store.delete_photo("根本没有这张.jpg")
         check("不存在的文件要报 FileNotFoundError", False, "居然通过了")
     except FileNotFoundError:
         check("不存在的文件要报 FileNotFoundError", True)
@@ -256,11 +226,10 @@ def main() -> int:
 
         print(f"临时照片目录：{tmp}")
         test_order()
+        test_next_index(tmp)
         test_square(tmp)
         test_alpha(tmp)
         test_exif(tmp)
-        test_reorder(tmp)
-        test_normalize(tmp)
         test_delete(tmp)
 
     print()

@@ -15,6 +15,11 @@
  * 屏幕四分之一高，字压在画上会被裁掉（详见文件末尾「窄屏」那一段），
  * 那时字要能落到画的下面去 —— 于是需要一层「只装画」的盒子把它撑住。
  *
+ * ## 舞台也可以不进 fixed：flow
+ *
+ * 湖边整页就是一幅景（fixed 铺满视口）；屋里底下还要有页脚，于是它要走
+ * 文档流 —— 见下面 `.stage-wrap--flow` 那一段。
+ *
  * ## 它只做三件事
  *
  * 1. **按数组顺序叠图层**。`layers` 的先后就是远近：数组前面的在远处。
@@ -26,9 +31,11 @@
  *
  * ## 祖先不得有 transform / filter / perspective
  *
- * `.stage-wrap` 是 `position: fixed`。任何非 none 的 transform 都会让祖先
- * 变成 fixed 后代的包含块，于是 `inset: 0` 按那个祖先的高度解析 —— 而场景页的
- * `main` 自身高度是 0，舞台会被整个推出屏幕。**这是踩过的坑，别再踩。**
+ * **湖边那一边**的 `.stage-wrap` 是 `position: fixed`。任何非 none 的 transform
+ * 都会让祖先变成 fixed 后代的包含块，于是 `inset: 0` 按那个祖先的高度解析 ——
+ * 而场景页的 `main` 自身高度是 0，舞台会被整个推出屏幕。**这是踩过的坑，别再踩。**
+ * （屋里走了文档流，不受这条约束；但两个场景共用 App.vue 那层祖先，
+ * 所以这条实际上对**两页**都成立。）
  *
  * ## 动效
  *
@@ -45,8 +52,16 @@ const props = withDefaults(
     scene: Scene
     /** 屋里要用：舞台整体往下让出导航条的高度 */
     navClearance?: boolean
+    /**
+     * 屋里要用：舞台**回到文档流**，不再 fixed 铺满视口。
+     *
+     * 这是「屋里要有页脚」的前提 —— fixed 的舞台会把页脚顶到屏幕外（
+     * 页脚在 App.vue，挂在 RouterView 后面）。代价是这一页从此可以往下滚。
+     * 湖边不开：那一页整页就是一幅景，没有页脚，也不需要滚。
+     */
+    flow?: boolean
   }>(),
-  { navClearance: false },
+  { navClearance: false, flow: false },
 )
 
 const hotspotIndex = computed(() => {
@@ -86,7 +101,10 @@ function zoneStyle(zone: SceneZone) {
 </script>
 
 <template>
-  <div class="stage-wrap" :class="navClearance && 'stage-wrap--nav-clearance'">
+  <div
+    class="stage-wrap"
+    :class="[navClearance && 'stage-wrap--nav-clearance', flow && 'stage-wrap--flow']"
+  >
     <div class="stage" :data-scene="scene.id">
       <!--
         画。图层全是绝对定位的，百分比以这个盒子为参照 ——
@@ -159,6 +177,43 @@ function zoneStyle(zone: SceneZone) {
 
 .stage-wrap--nav-clearance {
   padding-top: var(--nav-h);
+}
+
+/*
+ * 屋里：舞台**回到文档流**（RoomView 传 flow）。
+ *
+ * 它不再 fixed 铺满视口 —— 这是「屋里要有页脚」的前提：fixed 的舞台会把
+ * 页脚（在 App.vue，挂在 RouterView 后面）整个顶到屏幕外。代价是这一页
+ * 从此可以往下滚。
+ *
+ * min-height 取「视口高减导航」，是为了让舞台仍然占满首屏：
+ * 页脚因此落在首屏下沿之外 —— 往下滚一点点才见面，视口再高也不会在
+ * 页脚底下留一条空白纸。
+ *
+ * padding-top 归零：导航是 sticky 的、自己占文档流里的一条（见 SiteNav），
+ * 桌面上那条 --nav-h 的让位在这里就成了多出来的空档。
+ * （窄屏那一段早就这么做了，见文件末尾。）
+ *
+ * **景靠上，不居中**（align-items: flex-start）：屋里现在也是「导航 + 图 +
+ * 内容 + 页脚」的一套页，图的上沿就该和项目 / 影像那两张门面图一样**贴着
+ * 导航下沿**。湖边不跟着改 —— 它整页就是一幅景，居中那道纸边是「裱在纸上的
+ * 画」那个说法，见 .stage-wrap 上面那段。
+ *
+ * 代价：景下面会留出一大条纸（实测 1440×900 上是 139px）才开始页脚。
+ * 这一条**以前是上下各一半**的（居中时上 69 / 下 69）—— 现在上下不等，
+ * 上边为 0、全是下边。这是「贴住导航」与「占满一屏」两个要求夹出来的结果。
+ *
+ * 用两个类名写选择器（而不是单写 --flow）：这条规则要和上面的
+ * --nav-clearance 抢 padding-top、和 .stage-wrap 抢 align-items，
+ * 靠 . 的数量压过它们，不靠谁写在后面。
+ */
+.stage-wrap--nav-clearance.stage-wrap--flow {
+  position: static;
+  height: auto;
+  min-height: calc(100vh - var(--nav-h));
+  min-height: calc(100svh - var(--nav-h));
+  padding-top: 0;
+  align-items: flex-start;
 }
 
 .stage {
@@ -338,6 +393,17 @@ function zoneStyle(zone: SceneZone) {
     padding-top: 0;
     min-height: calc(100vh - var(--nav-h));
     min-height: calc(100svh - var(--nav-h));
+  }
+
+  /*
+    上面那条 --flow 里的 `align-items: flex-start` 是给**桌面**写的：
+    那里主轴是横向，它管的是纵轴（景靠上）。窄屏这一层的 `flex-direction`
+    翻成了 column，align-items 管的是横轴 —— 再留着 flex-start 就是左边对齐，
+    不再是居中（视口又矮又宽、--stage-w 收得比 100% 还窄时才看得出来）。
+    纵向的居中由 `justify-content: center` 给，还和湖边一致。
+  */
+  .stage-wrap--nav-clearance.stage-wrap--flow {
+    align-items: center;
   }
 
   /* 这一层不再裁：字要落到它的下沿之外去 */

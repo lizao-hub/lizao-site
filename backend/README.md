@@ -4,7 +4,7 @@ FastAPI 后端。前端在 `../frontend/`。
 
 两件事：
 
-1. **影像页的照片管理页** —— 加图、裁成正方形、调顺序、删除（`store.py`，不进库）；
+1. **影像页的照片管理页** —— 加图、裁成正方形、删除（`store.py`，不进库，顺序=上传先后）；
 2. **项目页的点赞与留言** —— 存在 SQLite 里，由 `/api/projects/{slug}/reactions` 发
    （`db.py` + `reactions.py`）。
 
@@ -21,33 +21,30 @@ uv run uvicorn main:app --reload --port 8000
 
 ## 它在管什么
 
-照片存在**前端源码目录** `frontend/src/assets/photos/`，**不是** `backend/media/`。
+照片存在**后端数据目录**，不在前端源码里：默认是仓库根的 `data/photos/`
+（部署时即 `/srv/lizao/data/photos`），可用 `PHOTOS_DIR` 覆盖。
 
-影像页的照片是 `import.meta.glob` 在构建期收进去的（见
-`frontend/src/views/GalleryView.vue`），**文件名就是顺序**。管理页直接往那个目录写
-文件，前端一行都不用改。
+`main.py` 把这个目录挂到 `/media/photos/`；影像页在**运行时**向 `/api/photos`
+拉清单，再用清单里的 `url` 取图（见 `frontend/src/views/GalleryView.vue`）。
+于是后台上传一张、刷新影像页就能看到 —— **不用重新 build 前端**。
 
-代价：**传完要重启 dev server 或重新 build**，影像页才会变 —— 管理页上写明了这件事。
-
-> ⚠️ 这是全站唯一一处「后端往前端源码目录写文件」的地方。它是个**本机工具**，
-> 不是线上服务。真要上线，照片该挪到 `backend/media/photos/` 由接口发 URL ——
-> 那时前端得改成运行时拉清单，`store.py` 是唯一需要动的地方。
+> 照片是**运行时数据**，不是构建产物。`data/photos/` 里的文件直接就是线上内容，
+> 传 / 删立刻生效。早年它们曾放在 `frontend/src/assets/photos/` 由
+> `import.meta.glob` 在构建期收进去，代价是每传一张都要重启 dev server 或
+> 重新 build —— 已经改掉了，别照着旧说法找。
 
 ## 目录
 
 ```
 backend/
 ├── main.py                 FastAPI 实例 + 路由（就这几个接口，没有分层）
-├── store.py                照片库：读写、方形化、重编号。文件操作的逻辑都在这
+├── store.py                照片库：读写、方形化、编号。文件操作的逻辑都在这
 ├── db.py                   SQLite：连接 + 建表（表结构就写在里面的 SCHEMA）
 ├── reactions.py            点赞与留言的读写（**库里只有这个**）
 ├── admin/index.html        管理页。单文件、自包含，没有构建步骤也没有前端依赖
 ├── lizao.db                SQLite 文件（**不提交** —— 里面的留言是真实数据，别删）
 ├── scripts/
-│   ├── check_store.py      store.py 的自检：uv run python scripts/check_store.py
-│   └── optimize_photos.py  离线批量压图（另一条路，见 scripts/README.md）
-├── photos_raw/             压图脚本的原图输入，不提交
-└── photos/                 压图脚本的输出（**不是**前端读的那个目录）
+│   └── check_store.py      store.py 的自检：uv run python scripts/check_store.py
 ```
 
 ## 接口
@@ -60,17 +57,20 @@ backend/
 | POST | `/api/projects/{slug}/comments` | 写一条留言，body `{"name": "...", "body": "..."}` |
 | GET | `/api/comments` | 全部留言（从新到旧）+ 每个项目的赞数与条数，管理页用 |
 | DELETE | `/api/comments/{id}` | 删一条留言 |
-| GET | `/api/photos` | 当前照片，**按影像页实际会显示的顺序** |
-| POST | `/api/photos` | 存一张（multipart 的 `file`），一律裁成正方形 |
-| PUT | `/api/photos/order` | 换顺序，body `{"order": ["01-x.jpg", ...]}` |
-| POST | `/api/photos/normalize` | 按当前顺序统一编号 |
+| GET | `/api/photos` | 当前照片，**按影像页实际会显示的顺序**（= 上传先后，不可调） |
+| POST | `/api/photos` | 存一张（multipart 的 `file`），一律裁成正方形，编号接在最大值后面 |
 | DELETE | `/api/photos/{name}` | 删一张 |
 | GET | `/media/photos/{name}` | 照片本体（管理页的缩略图用它） |
 
-⚠️ **四个写接口（上传 / 排序 / 统一编号 / 删除）返回的都是**完整清单**
-（`store.list_photos()`），不是「刚操作的那一张」。管理页拿它就是一整份
-`state.photos`，重画整个网格。上传曾经只回单张，页面读 `data.photos`
-得到 `undefined`，于是「文件存进去了但页面报保存失败」—— 别再让它们不一致。
+⚠️ **两个写接口（上传 / 删除）返回的都是完整清单**（`store.list_photos()`），
+不是「刚操作的那一张」。管理页拿它就是一整份 `state.photos`，重画整个网格。
+上传曾经只回单张，页面读 `data.photos` 得到 `undefined`，
+于是「文件存进去了但页面报保存失败」—— 别再让它们不一致。
+
+**顺序不可调**，这是有意的。照片只有「列 / 传 / 删」三种动作，没有重排接口 ——
+顺序就是上传的先后：`save_photo` 给每张编上「已有的最大编号 + 1」，
+两边都按这个编号排。多存一份「顺序表」迟早会和文件名对不上
+（旧版 `PUT /api/photos/order` 就是干这个的，已删）。
 
 ## 点赞与留言：SQLite
 
@@ -122,24 +122,23 @@ project_comment  slug → 很多条留言
 
 ## 顺序是怎么定的
 
-**编号前缀。** `07-foo.jpg` 里的 `07` 就是它在照片墙上的位置 ——
+**文件名就是一个自增 id：`1.jpg`、`2.jpg`、`3.jpg`……** 编号决定它站在第几张 ——
 没有第二份顺序清单，多存一份迟早会和文件名对不上。
 
-管理页拖完（或点完 ← →）→ 后端按新顺序给文件重编号。这和前端的排序规则是同一个
-约定（`localeCompare(..., { numeric: true })`），`store.py` 的 `natural_key` 是它的
-Python 版。
+编号由 `save_photo` 分配（已有的最大编号 + 1），所以**顺序就是上传的先后，
+而且不可调** —— 管理页没有拖拽，也没有重排接口。
 
-改名走**两趟**（先全改成临时名、再改成最终名）：一趟会撞车，
-`01-a.jpg` 要变 `02-a.jpg` 时 `02-b.jpg` 正占着这个位置。
-`scripts/check_store.py` 专门钉住这条。
+编号是**身份，不是位置**：删掉 `1.jpg` 之后，下一张仍然是 `4.jpg`（1 / 2 / 3 里
+最大是 3，再 +1），**洞不补**。好处是一张照片的 URL 一旦发出去就永久有效，
+删别人不会让它改名。
 
-⚠️ 两边的排序**只对「以 `NN-` 开头」的文件名保证一致**。手动丢进目录、没有编号的
-文件，在中英混排时两边会不同 —— 中文排序把汉字排在拉丁字母**前面**，而 Python 按
-码点比是反的。管理页因此会在检测到这种文件时弹一条提示，点「统一编号」就消掉了。
+影像页（`GalleryView.vue`）**不再自己排序**：它直接用 `list_photos()` 返回的
+清单。于是全站只有 `natural_key` 一处决定照片站在哪，也就不会再出现
+「管理页和影像页顺序不一致」。解析不出编号的杂文件（正常不该有）会垫在最后。
 
 ## 上传的正方形
 
-前端拖拽裁好再传（正方形 JPEG），后端**不信任客户端**，拿到后再兜一道：
+管理页选完图**直接传原图**，裁成方形完全由后端 `_to_rgb_square()` 负责：
 不是方的就居中裁成正方形。顺带还会：
 
 - 按 **EXIF 摆正** —— 手机竖拍的照片文件里是横的，只在 EXIF 写了一句「转 90°」，
@@ -148,7 +147,7 @@ Python 版。
 - 长边上限 **1600**、质量 **85**，**只缩不放**（放大只会变糊还变大）
 - 一律输出 `.jpg`
 
-参数在 `store.py` 顶部，和 `scripts/optimize_photos.py` 那套同值。
+参数在 `store.py` 顶部。
 
 ## 环境变量
 
@@ -157,8 +156,7 @@ Python 版。
 | `PHOTOS_DIR` | `store.py` | 覆盖照片目录（`scripts/check_store.py` 用它跑临时目录） |
 | `DATABASE_URL` | `db.py` | 只认 `sqlite:///...`，相对路径相对 **backend/** 解析。默认 `backend/lizao.db` |
 | `CORS_ORIGINS` | `main.py` | 逗号分隔。不配就只允许 `localhost:5173`。走 vite 代理时用不上（同源） |
-
-`.env.example` 里的 `MEDIA_ROOT` 仍然**没有人读** —— 照片目录由 `PHOTOS_DIR` 定。
+| `DIST_DIR` | `main.py` | 构建好的前端（`dist`）位置。默认仓库根的 `dist/`；它存在才接管 `/` 与 SPA 回退 |
 
 ## 没有的东西（别照着旧规划找）
 

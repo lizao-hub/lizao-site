@@ -11,21 +11,13 @@ FastAPI 后端。两件事：**影像页的照片管理页**、**项目页的点
 
 ## 它管什么
 
-- **照片**（`store.py`）：上传的图裁成正方形、压到 MAX_SIDE、存进
-  `frontend/src/assets/photos/`，按拖出来的顺序给文件重编号。
-  数据就是目录里那几个文件，**顺序就是文件名里的编号**，不进库。
+- **照片**（`store.py`）：上传的图裁成正方形、压到 MAX_SIDE、存进 `data/photos/`
+  （运行时由上面的 mount 直接发出去，传完刷新影像页就能看到，不用重新构建）。
+  **只有三个接口：列、传、删。** 顺序不可调 —— 它就是上传的先后，
+  编码在文件名的编号前缀里（见 store.py 顶部）。
 - **点赞与留言**（`reactions.py` + `db.py`）：**进 SQLite**，这是库里唯一的内容。
   它们按 slug 挂在项目上，一个 slug 一行累计数 + 很多条留言。
 
-## 库里**没有**项目正文
-
-项目内容在前端 `src/data/projects.ts`，是排版不是记录（一句引子 + 一段正文 +
-一句旁白 + 按需出现的数字 / 表格）。把它拆成五张表、或整块塞进 JSON 列，
-都只是多一份要维护的状态。会增长、要持久化的东西才进库 ——
-点赞会和留言就是这种东西。这段取舍写在那个数据文件的头部注释里。
-
-所以 slug 只做**格式**校验，不查「这个项目存不存在」：
-名单的权威来源是前端那份数据文件，后端不抄第二份。
 """
 
 from __future__ import annotations
@@ -78,17 +70,11 @@ origins = [o.strip() for o in os.environ.get("CORS_ORIGINS", "").split(",") if o
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins or ["http://localhost:5173", "http://127.0.0.1:5173"],
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["*"],
 )
 
 app.mount("/media/photos", StaticFiles(directory=ensure_dir(store.photos_dir())), name="photos")
-
-
-class OrderPayload(BaseModel):
-    """新的顺序，元素是磁盘上的文件名。"""
-
-    order: list[str]
 
 
 class CommentPayload(BaseModel):
@@ -239,24 +225,36 @@ def get_photos() -> dict:
     return store.list_photos()
 
 
+# 在 FastAPI 中，file: UploadFile = File(...) 这个写法其实是由类型提示（Type Hint）、默认参数（Default Value）和参数验证（Validation）三部分组成的。
+# 我们可以把它拆解开来，一步步解释它的作用：
+# 1. File(...) —— 告诉 FastAPI 这是一个文件（表单字段）
+# 在 FastAPI 的路径操作函数中，参数的默认值决定了 FastAPI 如何解析它：
+# 如果参数没有默认值，或者默认值是 None，FastAPI 默认会从 URL 路径、查询字符串（?key=value）或 JSON 请求体 中寻找这个参数。
+# File(...) 是一个特殊的类，当把它作为参数的默认值时，是在明确告诉 FastAPI：
+# “这个参数 file 需要从 multipart/form-data（表单数据）中获取，并且它是一个文件。”
+# FastAPI 看到它后，会自动处理上传文件的解析，并把二进制数据读取为 UploadFile 对象。
+# 2. UploadFile —— 告诉 FastAPI 返回什么类型的对象
+# UploadFile 是 FastAPI 内部封装的一个对象（基于 Starlette 框架），它代表了一个上传的文件。
+# 它提供了一些非常方便的方法，比如：
+# await file.read()：异步读取文件的所有二进制内容（比如你代码里用到的）。
+# file.filename：获取原始文件名。
+# file.content_type：获取文件的 MIME 类型（如 image/jpeg）。
+# 3. = ...（三个点） —— 声明这个参数是【必填】的
+# 在 Python 的 typing 和 pydantic（FastAPI 底层用的验证库）中，...（即 Python 内置的省略号 Ellipsis）代表这是一个必填项，不允许为空或缺失。
+# File(...) 的意思是：这个文件是必须上传的，不能没有。如果请求中没有上传文件，FastAPI 会直接拦截并返回 422 Unprocessable Entity 错误。
+# 如果写成 File(None)，那就表示文件是可选的，可以不传。
+
+
+
 @app.post("/api/photos", status_code=201)
 async def upload_photo(file: UploadFile = File(...)) -> dict:
     """
-    存一张方图，**返回整个清单**（和排序 / 统一编号 / 删除那三个一致）。
+    存一张方图，**返回整个清单**（和删除那个一致）。
 
-    前端已经拖拽裁好了再传（正方形 JPEG），这里还会再兜一道：
-    不是正方形就居中裁成正方形。**不信任客户端**这条在图片上尤其要紧 ——
-    裁歪一张只影响观感，但存进去一张 4:3 会把影像页的网格撑歪。
-
-    ⚠️ 返回的是 `store.list_photos()` 而不是刚存的那一
-    张：管理页上传完要立刻重画整个网格（新图要插在末尾、统计数字要变），
-    而它拿 `state.photos` 直接 `.map`。返回单张会让它读到 `undefined`
-    ——「上传成功但页面报保存失败」就是这么来的。四个写接口统一回清单，
-    管理页就不用区分该读哪一个。
     """
     data = await file.read()
     try:
-        store.save_photo(data, file.filename or "photo.jpg")
+        store.save_photo(data)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
@@ -264,27 +262,10 @@ async def upload_photo(file: UploadFile = File(...)) -> dict:
     return store.list_photos()
 
 
-@app.put("/api/photos/order")
-def reorder_photos(payload: OrderPayload) -> dict:
-    """按给定顺序重编号。顺序直接落在文件名上，没有第二份清单。"""
-    try:
-        store.reorder(payload.order)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return store.list_photos()
-
-
-@app.post("/api/photos/normalize")
-def normalize_photos() -> dict:
-    """按当前顺序统一编号（把没有 `NN-` 前缀的旧文件收进编号体系）。"""
-    store.normalize()
-    return store.list_photos()
-
-
 @app.delete("/api/photos/{name}")
 def delete_photo(name: str) -> dict:
     try:
-        store.delete(name)
+        store.delete_photo(name)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail="没有这张照片") from exc
     except ValueError as exc:

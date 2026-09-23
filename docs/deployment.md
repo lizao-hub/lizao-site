@@ -75,11 +75,9 @@
 
 ## 4. API 清单
 
-**照片**
+**照片**（只有三个：列、传、删）
 - `GET  /api/photos` —— 取当前照片清单（影像页加载时调，返回 `count` + `dir` + `photos[]`）
 - `POST /api/photos` —— 上传一张照片（后台管理页用，`multipart/form-data` 字段 `file`）
-- `PUT  /api/photos/order` —— 重排照片顺序
-- `POST /api/photos/normalize` —— 统一重编号
 - `DELETE /api/photos/{文件名}` —— 删除某张照片
 
 **项目点赞与留言**（按 `slug` 区分）

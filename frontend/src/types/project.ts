@@ -35,6 +35,35 @@ export interface ProjectVideo {
   caption?: string
 }
 
+/**
+ * 一条通路：按顺序推进的若干阶段，每个阶段里可以并排放几件事。
+ *
+ * **只在「流向本身就是内容」时才用。** 判据和表、视频是同一条 ——
+ * 「主进程写入图像帧 → 共享内存 → 三个计算进程并行取用 → 后处理按帧编号汇合」
+ * 写成一句话读得懂，但「谁在谁下游、哪几件事是同时发生的」读不出来，
+ * 而这正是那一节要讲的东西。
+ *
+ * **它不是流程图组件，也别往那个方向长。** 没有箭头、没有方框、没有底色、
+ * 没有圆角 —— 阶段排成一行（窄屏落成一列），靠序号、留白和一条细线说明顺序；
+ * 同一阶段里并排的条目本身就是「这几件事同时发生」。
+ * 一旦开始给节点加框、连线和颜色，这一页就从「读数的地方」变成了稿子。
+ */
+export interface ProjectFlowStage {
+  /**
+   * 这一阶段的名字。渲染时前面会带上两位序号（01 / 02 …），
+   * 序号由排版给，**不要写进这个字符串里**。
+   */
+  title: string
+  /** 这一阶段里并排的几件事。只有一件就写一件 */
+  items: { name: string; note?: string }[]
+}
+
+export interface ProjectFlow {
+  /** 通路上方那行说明。位置与字号跟表的 caption 一致 */
+  caption?: string
+  stages: ProjectFlowStage[]
+}
+
 /** 详情页里的一小节 */
 export interface ProjectBlock {
   /**
@@ -42,6 +71,12 @@ export interface ProjectBlock {
    * 不写就是一段没有小标题的普通正文。
    */
   lead?: string
+  /**
+   * 这一节的分类小字，排在小节序号（01 / 02）后面、引子上方一行。
+   * 写的是「这一节在讲什么」（性能优化 / 系统架构 / 服务化），不是标题 ——
+   * 标题由 `lead` 承担。两行都写时，先看到分类，再看到标题。
+   */
+  kicker?: string
   text: string
   /**
    * 旁白：我自己补的一句话，比正文小一号、浅一档，缩进排在正文下面。
@@ -63,6 +98,8 @@ export interface ProjectBlock {
   stats?: ProjectMetric[]
   /** 只有「数字必须对齐」时才用表格。能写成一段话的就别写成表 */
   table?: ProjectTable
+  /** 只有「流向是内容本身」时才用通路，见 ProjectFlow 那段判据 */
+  flow?: ProjectFlow
   /** 只有「不放就说不清」时才用视频，一页最多一段 */
   video?: ProjectVideo
 }

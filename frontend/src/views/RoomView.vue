@@ -9,7 +9,14 @@ import { profile } from '@/data/profile'
 
 /**
  * 屋里。整站的目录，也是「关于我」。
- * 没有页脚：页脚会把 100vh 的舞台顶下去。
+ *
+ * 这一页**有页脚**（挂在 App.vue 的 RouterView 后面），所以舞台不能再是
+ * fixed 铺满视口的整屏景 —— 那样页脚会被顶到屏幕外。它走 `flow`：
+ * 回到文档流、自己占满一屏高、**景贴着导航下沿**（不再像湖边那样居中），
+ * 页脚落在一屏下沿之外，往下滚一点点才见面。
+ * 代价是这一页从此可以往下滚（湖边仍然不滚），景下面也留出一大条纸。
+ *
+ * 景与湖边一样是**完整的一张**，上下不裁。
  */
 
 const router = useRouter()
@@ -40,7 +47,7 @@ onBeforeUnmount(() => window.clearTimeout(timer))
 
 <template>
   <main class="scene-page">
-    <SceneStage :scene="scene" nav-clearance @click.capture="onStageClick">
+    <SceneStage :scene="scene" nav-clearance flow @click.capture="onStageClick">
       <div class="intro" :style="{ left: `${roomIntro.left}%`, top: `${roomIntro.top}%` }">
         <p class="intro__name">
           LIzao<img class="intro__face" :src="face" alt="" />

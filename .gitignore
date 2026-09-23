@@ -29,10 +29,6 @@ coverage/
 frontend/__screenshots__/
 *.timestamp-*-*.mjs
 
-# 照片处理：原图不入库，只提交压缩后的成品
-frontend/photos_raw/
-backend/photos_raw/
-
 # 字体子集脚本的中间产物（npm run subset-font 会重新生成）
 frontend/glyph-set.txt
 
@@ -62,13 +58,12 @@ env/
 # 上传的照片（本机开发用，线上走对象存储）
 backend/media/
 
+# 照片库（运行时数据，上传/裁剪后的照片落在这里，不属源码）
+data/
+
 # ============================================
 # 其他
 # ============================================
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-
-# Agent 工作区（本地草稿）：备份 tar 包、试色截图、构建日志、长期记忆。
-# 42M 的临时产物，不属于站点源码，不上传。
-.workbuddy/
