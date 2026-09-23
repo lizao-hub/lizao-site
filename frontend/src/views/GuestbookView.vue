@@ -24,6 +24,7 @@
  */
 import { computed, onMounted, ref } from 'vue'
 import PagePlaceholder from '@/components/PagePlaceholder.vue'
+import Peeper from '@/components/Peeper.vue'
 import { fetchComments, postComment } from '@/data/guestbook'
 import type { Comment } from '@/types/guestbook'
 
@@ -107,29 +108,40 @@ function formatStamp(iso: string): string {
       <!-- 根本没读到。**要说出来**，不能留白（见文件头） -->
       <p v-else class="guestbook__empty">读不到留言，等一下再刷新看看。</p>
 
-      <!-- 输入框收一道 44em（和详情页同一档阅读行宽）：铺满整个外框会太长 -->
-      <form class="guestbook__form max-w-prose" @submit.prevent="send">
-        <input
-          v-model="name"
-          class="guestbook__field"
-          type="text"
-          maxlength="24"
-          aria-label="名字"
-          placeholder="名字"
-        />
-        <textarea
-          v-model="body"
-          class="guestbook__field guestbook__field--area"
-          rows="3"
-          maxlength="500"
-          aria-label="留言"
-          placeholder="说点什么"
-        />
-        <button type="submit" class="guestbook__submit" :disabled="!canSend">
-          {{ sending ? '写着' : '写上去' }}
-        </button>
-        <p v-if="error" class="guestbook__error">{{ error }}</p>
-      </form>
+      <!--
+        输入框收一道 44em（和详情页同一档阅读行宽）：铺满整个外框会太长。
+        右边并排放着小人（Peeper），两边**同高** —— 见样式里的 stretch。
+      -->
+      <div class="guestbook__write">
+        <form class="guestbook__form max-w-prose" @submit.prevent="send">
+          <input
+            v-model="name"
+            class="guestbook__field"
+            type="text"
+            maxlength="24"
+            aria-label="名字"
+            placeholder="名字"
+          />
+          <textarea
+            v-model="body"
+            class="guestbook__field guestbook__field--area"
+            rows="3"
+            maxlength="500"
+            aria-label="留言"
+            placeholder="说点什么"
+          />
+          <button type="submit" class="guestbook__submit" :disabled="!canSend">
+            {{ sending ? '写着' : '写上去' }}
+          </button>
+          <p v-if="error" class="guestbook__error">{{ error }}</p>
+        </form>
+
+        <!--
+          小人是这一行的第二个 flex 项：`stretch` 把它拉到跟表单一样高，
+          宽度由原图的正方形跟出来。它挂在整页右下角那版已回退（见 Peeper.vue）。
+        -->
+        <Peeper class="guestbook__peeper" />
+      </div>
     </section>
   </PagePlaceholder>
 </template>
@@ -197,7 +209,7 @@ function formatStamp(iso: string): string {
   padding: 1rem 1.15rem;
   background: var(--surface);
   border: 1px solid var(--line-soft);
-  /* 一点硬偏移，像压在纸上的实体 —— 站上的立体感靠色块偏移，不用模糊投影 */
+  /* 一点硬偏移，像压在纸上的实体 —— 和影像页的照片框同一路（硬偏移是默认笔法） */
   box-shadow: 2px 2px 0 var(--line-soft);
 }
 
@@ -298,13 +310,47 @@ function formatStamp(iso: string): string {
   opacity: 0.55;
 }
 
-.guestbook__form {
+/*
+ * 写留言这一块：上面一条分节线，里面**左边表单、右边小人，并排、同高**。
+ *
+ * 用 **grid** 而不是 flex，这一点不能换：小人的高由父级 stretch 决定，
+ * 而它的宽要由高跟出来（原图是正方形，见 Peeper.vue）。flex 先定主轴（宽）
+ * 再拉伸交叉轴（高），`aspect-ratio` 在那个顺序下算不出宽 —— 实测宽是 0；
+ * grid 先把行高定下来、再算列宽，才能得到正方形。
+ *
+ * 第一列 `1fr`：表单吃掉剩下的宽度（它自己再用 max-w-prose 封到 44em），
+ * 第二列 `auto`：小人那一列，宽 = 高。
+ *
+ * 分节线划在这一层而不是表单上：它是「墙」和「写」之间那条边界，
+ * 现在横跨这一整行（表单 + 小人）。
+ */
+.guestbook__write {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2.5rem;
   margin-top: 3.5rem;
   padding-top: 2.5rem;
   border-top: 1px solid var(--line-soft);
 }
 
-/* 输入框只留一条下边线，不画框 —— 和这一页「靠透明度分层」是同一个路子 */
+/* 列宽由 grid 给，这里只保证窄屏下能让出宽度（内容全是 `width: 100%`） */
+.guestbook__form {
+  min-width: 0;
+}
+
+/*
+ * 输入框：只留一条下边线，不画框 —— 和这一页「靠透明度分层」是同一个路子。
+ * 字号与浓度都借项目详情页那一套：正文 `1rem` / `0.66`，
+ * 那页的**下限是 0.55（4.55:1）**（见 ProjectView.vue 的 .detail__meta）。
+ *
+ * ⚠️ **别在这个元素上写 `opacity`。** 它和 `::placeholder` 自己的 opacity 是
+ * **相乘**的：原来这里 0.66、提示那边 0.3，合成 0.198 —— 对纸只有 1.75:1。
+ * 而空表单里看得见的就是占位提示，于是整块成了灰雾（2026-09-23 修的就是这个）。
+ * 浓度改成各写各的，谁也不乘谁。
+ *
+ * 字号给 `1rem` 顺手解掉一件事：iOS Safari 只对 font-size < 16px 的输入框
+ * 自动放大整页，1rem 正好是 16px，窄屏里那条覆写因此可以删了。
+ */
 .guestbook__field {
   display: block;
   width: 100%;
@@ -312,21 +358,25 @@ function formatStamp(iso: string): string {
   border: 0;
   border-bottom: 1px solid var(--line);
   background: transparent;
-  font-size: 0.9375rem;
-  line-height: 1.7;
-  opacity: 0.66;
+  font-size: 1rem;
+  line-height: 1.95;
+  /* 用户自己写下的字：满浓度（详情页标题那一档），不叠 opacity */
   color: var(--ink-black);
   transition: border-color 200ms linear;
 }
 
 .guestbook__field:focus {
-  opacity: 1;
   border-bottom-color: var(--ink-black);
 }
 
+/*
+ * 占位提示：**单独一档浓度**。0.6 对纸约 5.6:1 —— 比站上的下限
+ * （4.55:1）还高一档，因为它是要给人读的；和上面输入后的满浓度也差得够开，
+ * 「这是提示 / 这是我写的」一眼分得清。
+ */
 .guestbook__field::placeholder {
-  opacity: 0.3;
   color: var(--ink-black);
+  opacity: 0.6;
 }
 
 .guestbook__field--area {
@@ -337,6 +387,9 @@ function formatStamp(iso: string): string {
 /*
  * 提交按钮：细线框 + **手绘圆角**（手绘零件库里的同一组数值）。
  * 全站唯一一件穿上手绘圆角的零件 —— 会按下去的东西可以带圆角。
+ *
+ * 浓度 0.7（对纸约 7:1）而不是之前的 0.55：0.55 是站上的下限（4.55:1），
+ * 一个按上去才有反应的按钮压在线上太保守了。
  */
 .guestbook__submit {
   margin-top: 1.5rem;
@@ -346,7 +399,7 @@ function formatStamp(iso: string): string {
   background: transparent;
   font-size: 0.8125rem;
   letter-spacing: 0.16em;
-  opacity: 0.55;
+  opacity: 0.7;
   color: var(--ink-black);
   transition:
     transform 140ms linear,
@@ -364,16 +417,22 @@ function formatStamp(iso: string): string {
   transform: translate(1px, 1px);
 }
 
+/*
+ * 没填完时是禁用的，也是**第一眼看到的那个状态** —— 所以别把它压到看不见：
+ * 0.28 对纸只有约 1.9:1（原来就是它和占位提示一起把这一块变成灰雾的），
+ * 现在 0.45（约 3.4:1）：读得出来，又和启用时的 0.7 差得清楚。
+ */
 .guestbook__submit:disabled {
-  opacity: 0.28;
+  opacity: 0.45;
   cursor: default;
 }
 
+/* 出错那句要比正文实一档 —— 它是要人停下来的 */
 .guestbook__error {
   margin-top: 0.9rem;
-  font-size: 0.78rem;
+  font-size: 0.8125rem;
   letter-spacing: 0.16em;
-  opacity: 0.66;
+  opacity: 0.72;
 }
 
 /*
@@ -384,18 +443,15 @@ function formatStamp(iso: string): string {
  * ≤480px 一列：375px 上两列只有约 155px 宽，三行字一行摊不到十个字，
  * 每条留言都被截成一句半 —— 那不是卡片，是碎片。
  *
- * 输入框字号抬到 1rem（16px）**不是审美**：iOS Safari 会对 font-size < 16px
- * 的输入框自动放大整页，一聚焦就跳一下、还得手动缩回去。
+ * 输入框的字号不用在这里再抬一档：它本来就写着 1rem（16px）。
+ * 那个数是**功能性的**，不是审美 —— iOS Safari 会对 font-size < 16px
+ * 的输入框自动放大整页，一聚焦就跳一下、还得手动缩回去（见 .guestbook__field）。
  * 「写上去」提到 44px 高，和站上其它可按的东西同一个下限（WCAG 2.5.5）。
  */
 @media (max-width: 640px) {
   .guestbook__wall {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 2rem;
-  }
-
-  .guestbook__field {
-    font-size: 1rem;
   }
 
   .guestbook__submit {

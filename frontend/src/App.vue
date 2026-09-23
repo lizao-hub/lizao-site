@@ -56,7 +56,7 @@ const hasFooter = computed(() => !isScene.value)
   />
 
   <!--
-    导航自己带纸底（见 main.css 的 .nav-bar），色值就是全站唯一的页面底色，
+    导航自己带纸底（见 main.css 的 .nav-bar），色值就是全站共用的页面底色，
     每一页都相同 —— 不再需要按路由给它换色。
     （曾经屋里那一条要换 `--scene-paper`，因为舞台铺的是另一种冷一点的纸；
       两种纸并成一个颜色后，那条分支已删。）

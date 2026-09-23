@@ -134,7 +134,7 @@ onMounted(async () => {
   padding: 3.5%;
   background: var(--photo-frame);
   border: 1px solid var(--line-soft);
-  /* 一点硬偏移，像压在纸上的实体 —— 站上的立体感靠色块偏移，不用模糊投影 */
+  /* 一点硬偏移，像压在纸上的实体 —— 硬偏移是站上的默认笔法（见 main.css 头部） */
   box-shadow: 2px 2px 0 var(--line-soft);
   transition:
     transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1),
@@ -143,7 +143,10 @@ onMounted(async () => {
 
 .photo:hover {
   transform: scale(1.05);
-  /* 投影拉开 = 离纸面更远，仍然没有模糊量（模糊投影是站上的禁忌） */
+  /*
+   * 投影拉开 = 离纸面更远。这里保持硬偏移（零模糊量）——
+   * 换成模糊投影也可以，只是当前这套视觉没这么用，改的时候在代码旁说一句为什么。
+   */
   box-shadow: 6px 6px 0 var(--line-soft);
 }
 

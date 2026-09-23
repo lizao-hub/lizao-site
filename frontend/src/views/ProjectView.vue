@@ -643,7 +643,7 @@ function ordinal(index: number): string {
 
 /*
  * 被点名的那一行（`highlight`）。**全表只有这一行是实的。**
- * 换颜色是这一页禁止的做法，所以照这一页唯一的语言来：透明度顶到 1，
+ * 默认不给这一页加颜色，所以照这一页自己的语言来：透明度顶到 1，
  * 底下那条线从淡痕换成看得见的那一档。其余各行一律停在 0.6。
  */
 .detail__table tr.is-mark .detail__rowhead,
